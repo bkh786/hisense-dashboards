@@ -974,7 +974,7 @@ const COLMAP = {
   'RSM Code': 'rsmCode', 'RSM Name': 'rsm', 'Zone': 'zone', 'State': 'state', 'Product price': 'price',
   'Product': 'category', 'Product Category': 'techCat', 'Product Sub Category': 'subCat',
   'Sales Value': 'value', 'Store Channel Type': 'channelType', 'Store Channel Name': 'channelName',
-  'Partner Code': 'partnerCode', 'Promoter CTC': 'ctc',
+  'Partner Code': 'partnerCode', 'Promoter CTC': 'ctc', 'Promoter Salary': 'ctc',
 };
 /* Robustly parse a date cell that may already be a JS Date (SheetJS w/ cellDates:true),
    an Excel serial number, or DD-MM-YYYY / YYYY-MM-DD text. */
@@ -1008,8 +1008,8 @@ async function fetchLiveData() {
   try {
     const res = await fetch(CSV_URL);
     if (!res.ok) throw new Error("Network response was not ok");
-    const ab = await res.arrayBuffer();
-    const wb = XLSX.read(ab, { type: 'array', cellDates: true });
+    const text = await res.text();
+    const wb = XLSX.read(text, { type: 'string', cellDates: true });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
     const newRecords = rows.filter(r => r['Response Code']).map(r => {
