@@ -661,7 +661,40 @@ function makeBarChart(id, colors, opts = {}) {
   return charts[id];
 }
 
-const PIE_COLORS = [PALETTE.dark, PALETTE.amber, PALETTE.mid, PALETTE.light, PALETTE.coral, PALETTE.violet, PALETTE.paleLight];
+const PIE_COLORS = [PALETTE.dark, PALETTE.amber, PALETTE.mid, PALETTE.coral, PALETTE.light, PALETTE.violet, PALETTE.paleLight];
+
+const pieLabelsPlugin = {
+  id: 'pieLabels',
+  afterDraw(chart) {
+    if (chart.config.type !== 'doughnut' && chart.config.type !== 'pie') return;
+    const ctx = chart.ctx;
+    chart.data.datasets.forEach((dataset, i) => {
+      const meta = chart.getDatasetMeta(i);
+      let total = 0;
+      dataset.data.forEach(v => total += v);
+      if (total === 0) return;
+      meta.data.forEach((element, index) => {
+        const val = dataset.data[index];
+        if (!val || val === 0) return;
+        const percent = Math.round((val / total) * 100) + '%';
+        const position = element.tooltipPosition();
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.7)';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1;
+        ctx.fillText(percent, position.x, position.y);
+        ctx.restore();
+      });
+    });
+  }
+};
+Chart.register(pieLabelsPlugin);
+
 function makePieChart(id) {
   const el = document.getElementById(id);
   charts[id] = new Chart(el, {
@@ -1013,12 +1046,12 @@ function toISO(v) {
   if (v === null || v === undefined || v === '') return null;
   if (v instanceof Date) {
     if (isNaN(v.getTime())) return null;
-    return v.toISOString().slice(0, 10);
+    return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
   }
   if (typeof v === 'number') { // Excel serial date
     const d = new Date(Math.round((v - 25569) * 86400 * 1000));
     if (isNaN(d.getTime())) return null;
-    return d.toISOString().slice(0, 10);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
   }
   const s = String(v).trim();
   if (!s) return null;
@@ -1026,7 +1059,9 @@ function toISO(v) {
   const m = s.match(/^(\d{2})-(\d{2})-(\d{4})/); // DD-MM-YYYY
   if (m) return `${m[3]}-${m[2]}-${m[1]}`;
   const d2 = new Date(s);
-  if (!isNaN(d2.getTime())) return d2.toISOString().slice(0, 10);
+  if (!isNaN(d2.getTime())) {
+    return `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, '0')}-${String(d2.getDate()).padStart(2, '0')}`;
+  }
   return null;
 }
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsT3YTkMmyVNUQ1PAIEyLHregVWVY_E04-Laog1GrxXi1FKg19oOkzHCCrb8xXIYQNnjg-qIT6di_7/pub?gid=1303341512&single=true&output=csv";
