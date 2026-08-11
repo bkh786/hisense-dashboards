@@ -998,8 +998,7 @@ function toISO(v) {
   if (!isNaN(d2.getTime())) return d2.toISOString().slice(0, 10);
   return null;
 }
-const RAW_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsT3YTkMmyVNUQ1PAIEyLHregVWVY_E04-Laog1GrxXi1FKg19oOkzHCCrb8xXIYQNnjg-qIT6di_7/pub?gid=1303341512&single=true&output=csv";
-const CSV_URL = "https://corsproxy.io/?" + encodeURIComponent(RAW_CSV_URL);
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsT3YTkMmyVNUQ1PAIEyLHregVWVY_E04-Laog1GrxXi1FKg19oOkzHCCrb8xXIYQNnjg-qIT6di_7/pub?gid=1303341512&single=true&output=csv";
 
 async function fetchLiveData() {
   const btn = document.getElementById('uploadBtn');
