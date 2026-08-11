@@ -539,9 +539,8 @@ function minMaxDates(records) {
 }
 
 function initFilterDefaults() {
-  const [mn, mx] = minMaxDates(RECORDS);
-  state.dateFrom = mn;
-  state.dateTo = mx;
+  state.dateFrom = null;
+  state.dateTo = null;
   FILTER_DIMS.forEach(d => state.filters[d.key] = new Set());
 }
 
@@ -662,6 +661,29 @@ function makeBarChart(id, colors, opts = {}) {
   return charts[id];
 }
 
+const PIE_COLORS = [PALETTE.dark, PALETTE.amber, PALETTE.mid, PALETTE.light, PALETTE.coral, PALETTE.violet, PALETTE.paleLight];
+function makePieChart(id) {
+  const el = document.getElementById(id);
+  charts[id] = new Chart(el, {
+    type: 'doughnut',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 420, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: true, position: 'right', labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, padding: 12, font: { size: 10 } } },
+        tooltip: {
+          backgroundColor: '#12241F', padding: 10, cornerRadius: 8, displayColors: false,
+          callbacks: { label: c => id.includes('Value') ? ' ' + fmtINR(c.parsed) : ' ' + fmtNum(c.parsed) + ' units' }
+        }
+      },
+      cutout: '60%'
+    }
+  });
+  return charts[id];
+}
+
 function initCharts() {
   makeBarChart('chartZoneValue', PALETTE.dark, { tooltipCallbacks: { label: c => fmtINR(c.parsed.y) } });
   makeBarChart('chartZoneUnits', PALETTE.light, { tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' units' } });
@@ -669,10 +691,10 @@ function initCharts() {
   makeBarChart('chartStateCount', PALETTE.light, { rotate: 40, tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' txns' } });
   makeBarChart('chartTL', PALETTE.mid, { rotate: 35, tooltipCallbacks: { label: c => fmtINR(c.parsed.y) } });
   makeBarChart('chartRSM', PALETTE.mid, { tooltipCallbacks: { label: c => fmtINR(c.parsed.y) } });
-  makeBarChart('chartCatValue', [PALETTE.dark, PALETTE.amber], { tooltipCallbacks: { label: c => fmtINR(c.parsed.y) } });
-  makeBarChart('chartCatUnits', [PALETTE.dark, PALETTE.amber], { tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' units' } });
-  makeBarChart('chartChValue', PALETTE.mid, { tooltipCallbacks: { label: c => fmtINR(c.parsed.y) } });
-  makeBarChart('chartChUnits', PALETTE.light, { tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' units' } });
+  makePieChart('chartCatValue');
+  makePieChart('chartCatUnits');
+  makePieChart('chartChValue');
+  makePieChart('chartChUnits');
 
   const trendEl = document.getElementById('chartTrend');
   charts.trend = new Chart(trendEl, {
@@ -708,6 +730,14 @@ function updateBarChart(id, entries, opts = {}) {
   c.data.labels = entries.map(e => opts.labelFmt ? opts.labelFmt(e[0]) : e[0]);
   c.data.datasets[0].data = entries.map(e => e[1]);
   if (opts.colors) c.data.datasets[0].backgroundColor = opts.colors;
+  c.update();
+}
+
+function updatePieChart(id, entries) {
+  const c = charts[id];
+  c.data.labels = entries.map(e => e[0]);
+  c.data.datasets[0].data = entries.map(e => e[1]);
+  c.data.datasets[0].backgroundColor = PIE_COLORS.slice(0, entries.length);
   c.update();
 }
 
@@ -813,13 +843,13 @@ function renderAll() {
   /* ---- Category / Channel ---- */
   const catValEntries = [['TV', tvValue], ['AC', acValue]];
   const catUnitEntries = [['TV', tvRows.reduce((a, r) => a + r.qty, 0)], ['AC', acRows.reduce((a, r) => a + r.qty, 0)]];
-  updateBarChart('chartCatValue', catValEntries, { colors: [PALETTE.dark, PALETTE.amber] });
-  updateBarChart('chartCatUnits', catUnitEntries, { colors: [PALETTE.dark, PALETTE.amber] });
+  updatePieChart('chartCatValue', catValEntries);
+  updatePieChart('chartCatUnits', catUnitEntries);
 
   const chValMap = sortMapDesc(sumBy(sales, r => r.channelType, r => r.value));
   const chUnitMap = sortMapDesc(sumBy(sales, r => r.channelType, r => r.qty));
-  updateBarChart('chartChValue', chValMap);
-  updateBarChart('chartChUnits', chUnitMap);
+  updatePieChart('chartChValue', chValMap);
+  updatePieChart('chartChUnits', chUnitMap);
 
   /* ---- SKU leaderboards ---- */
   function topSkuFor(rows, n) {
@@ -871,7 +901,8 @@ function renderAll() {
     `).join('');
   }
 
-  document.getElementById('dataRangeLabel').textContent = 'Data ' + (state.dateFrom || '?') + ' \u2192 ' + (state.dateTo || '?');
+  const drStr = (!state.dateFrom && !state.dateTo) ? 'All Time Data' : ('Data ' + (state.dateFrom || '...') + ' \u2192 ' + (state.dateTo || '...'));
+  document.getElementById('dataRangeLabel').textContent = drStr;
 }
 
 /* =========================================================================
@@ -886,9 +917,9 @@ function buildFilterUI() {
   const [mn, mx] = minMaxDates(RECORDS);
   dateField.innerHTML = `<label>Date Range</label>
     <div style="display:flex;gap:5px;align-items:center;">
-      <input type="date" id="dateFromInput" value="${state.dateFrom}" min="${mn}" max="${mx}" style="width:50%;">
+      <input type="date" id="dateFromInput" value="${state.dateFrom || ''}" min="${mn}" max="${mx}" style="width:50%;">
       <span style="color:var(--ink-faint);font-size:11px;">&ndash;</span>
-      <input type="date" id="dateToInput" value="${state.dateTo}" min="${mn}" max="${mx}" style="width:50%;">
+      <input type="date" id="dateToInput" value="${state.dateTo || ''}" min="${mn}" max="${mx}" style="width:50%;">
     </div>`;
   grid.appendChild(dateField);
   dateField.querySelector('#dateFromInput').addEventListener('change', e => { state.dateFrom = e.target.value; renderAll(); });
