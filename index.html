@@ -1064,7 +1064,7 @@ function toISO(v) {
   }
   return null;
 }
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsT3YTkMmyVNUQ1PAIEyLHregVWVY_E04-Laog1GrxXi1FKg19oOkzHCCrb8xXIYQNnjg-qIT6di_7/pub?gid=1303341512&single=true&output=csv";
+const EXCEL_URL = "https://teamchannelplay-my.sharepoint.com/personal/bikash_roy1_channelplay_in/_layouts/15/Doc.aspx?sourcedoc={3365b479-65b6-4fb9-95c2-c6f4ced28a44}&action=embedview&download=1";
 
 async function fetchLiveData() {
   const btn = document.getElementById('uploadBtn');
@@ -1072,10 +1072,10 @@ async function fetchLiveData() {
   btn.innerHTML = 'Loading live data...';
   btn.disabled = true;
   try {
-    const res = await fetch(CSV_URL);
-    if (!res.ok) throw new Error("Network response was not ok");
-    const text = await res.text();
-    const wb = XLSX.read(text, { type: 'string', cellDates: true });
+    const res = await fetch(EXCEL_URL);
+    if (!res.ok) throw new Error("Network response was not ok (status " + res.status + ")");
+    const buffer = await res.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: true });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
     const newRecords = rows.filter(r => r['Response Code']).map(r => {
