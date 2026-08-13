@@ -125,6 +125,14 @@ header.topbar{
 .title-block h1{margin:0;font-size:19px;font-weight:800;color:#fff;letter-spacing:.1px;}
 .title-block .sub{font-size:11.5px;color:var(--teal-200);font-weight:500;}
 .top-spacer{flex:1;}
+.download-report-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.2);
+  font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:10px;cursor:pointer;
+  text-decoration:none;transition:all .15s ease-in-out;
+}
+.download-report-btn:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.35);color:#fff;transform:translateY(-1px);}
+.download-report-btn:active{transform:translateY(0);}
 .live-pill{
   display:flex;align-items:center;gap:8px;
   background:rgba(255,255,255,.08);
@@ -325,7 +333,7 @@ footer .brand-line img{height:14px;opacity:.6;}
   .topbar-inner{flex-wrap:wrap;padding:14px 16px;gap:10px;}
   .title-block .sub{display:none;}
   .top-spacer{display:none;}
-  .live-pill{order:3;font-size:11px;padding:6px 10px;}
+  .download-report-btn{order:3;font-size:11.5px;padding:7px 11px;}
   .upload-btn{order:4;font-size:11.5px;padding:7px 11px;}
   .reset-btn{order:5;font-size:11.5px;padding:7px 11px;}
   .kpi-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
@@ -353,7 +361,14 @@ footer .brand-line img{height:14px;opacity:.6;}
       <div class="sub">Promoter Program &middot; Live &amp; fully interactive</div>
     </div>
     <div class="top-spacer"></div>
-    <div class="live-pill"><span class="dot"></span><span id="dataRangeLabel">&mdash;</span></div>
+    <a href="https://teamchannelplay-my.sharepoint.com/:x:/g/personal/bikash_roy1_channelplay_in/IQDIM4tVlfGcTLbyu1n2U5CLAe7bQLUGseviTITIX3RiylU?e=Q7GrRI&download=1" target="_blank" rel="noopener noreferrer" class="download-report-btn" id="downloadReportBtn" title="Download Full Report">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align: middle;">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      <span>Download Report</span>
+    </a>
     <button class="upload-btn" id="uploadBtn" title="Refresh live data" style="display: flex; align-items: center; gap: 6px;">
       <span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;"></span>
       Live data connected
@@ -935,7 +950,8 @@ function renderAll() {
   }
 
   const drStr = (!state.dateFrom && !state.dateTo) ? 'All Time Data' : ('Data ' + (state.dateFrom || '...') + ' \u2192 ' + (state.dateTo || '...'));
-  document.getElementById('dataRangeLabel').textContent = drStr;
+  const drLabel = document.getElementById('dataRangeLabel');
+  if (drLabel) drLabel.textContent = drStr;
 }
 
 /* =========================================================================
