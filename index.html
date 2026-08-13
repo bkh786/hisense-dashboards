@@ -1065,6 +1065,7 @@ function toISO(v) {
   return null;
 }
 const EXCEL_URL = "https://teamchannelplay-my.sharepoint.com/:x:/g/personal/bikash_roy1_channelplay_in/IQB5tGUztmW5T5XCxvTO0opEAQ0SPROaiBH8L64hBPnKoi8?e=jgDyn6&download=1";
+const DIRECT_DOWNLOAD_URL = "https://teamchannelplay-my.sharepoint.com/personal/bikash_roy1_channelplay_in/_layouts/15/download.aspx?share=IQB5tGUztmW5T5XCxvTO0opEAQ0SPROaiBH8L64hBPnKoi8";
 
 async function fetchLiveData() {
   const btn = document.getElementById('uploadBtn');
@@ -1072,7 +1073,16 @@ async function fetchLiveData() {
   btn.innerHTML = 'Loading live data...';
   btn.disabled = true;
   try {
-    const res = await fetch(EXCEL_URL);
+    let res = null;
+    try {
+      res = await fetch(EXCEL_URL);
+    } catch (err) {
+      console.warn("Standard share link fetch failed, trying direct download endpoint...", err);
+      res = await fetch(DIRECT_DOWNLOAD_URL);
+    }
+    if (!res || !res.ok) {
+      res = await fetch(DIRECT_DOWNLOAD_URL);
+    }
     if (!res.ok) throw new Error("Network response was not ok (status " + res.status + ")");
     const buffer = await res.arrayBuffer();
     const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: true });
