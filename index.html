@@ -1265,27 +1265,48 @@ function toISO(v) {
   }
   return null;
 }
-const EXCEL_URL = "https://teamchannelplay-my.sharepoint.com/:x:/g/personal/bikash_roy1_channelplay_in/IQB5tGUztmW5T5XCxvTO0opEAQ0SPROaiBH8L64hBPnKoi8?e=jgDyn6&download=1";
-const DIRECT_DOWNLOAD_URL = "https://teamchannelplay-my.sharepoint.com/personal/bikash_roy1_channelplay_in/_layouts/15/download.aspx?share=IQB5tGUztmW5T5XCxvTO0opEAQ0SPROaiBH8L64hBPnKoi8";
+const SALES_SHARE_ID = "IQDIM4tVlfGcTLbyu1n2U5CLAe7bQLUGseviTITIX3RiylU";
+const DIRECT_DOWNLOAD_URL = `https://teamchannelplay-my.sharepoint.com/personal/bikash_roy1_channelplay_in/_layouts/15/download.aspx?share=${SALES_SHARE_ID}`;
+const EXCEL_URL = `https://teamchannelplay-my.sharepoint.com/:x:/g/personal/bikash_roy1_channelplay_in/${SALES_SHARE_ID}?e=Q7GrRI&download=1`;
 
-async function fetchLiveData() {
+let isFetchingLive = false;
+let lastFetchTime = 0;
+
+async function fetchFileBuffer(url) {
+  const sep = url.includes('?') ? '&' : '?';
+  const freshUrl = `${url}${sep}_cb=${Date.now()}`;
+  const res = await fetch(freshUrl, {
+    cache: 'no-store',
+    headers: { 'pragma': 'no-cache', 'cache-control': 'no-cache' }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const buf = await res.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  if (bytes.length < 100 || (bytes[0] === 0x3C && bytes[1] === 0x21) || (bytes[0] === 0x0D && bytes[1] === 0x0A)) {
+    throw new Error('Received HTML instead of Excel binary');
+  }
+  return buf;
+}
+
+async function fetchLiveData(force = false) {
+  const now = Date.now();
+  if (isFetchingLive) return;
+  if (!force && lastFetchTime && (now - lastFetchTime < 10000)) return;
+  isFetchingLive = true;
+
   const btn = document.getElementById('uploadBtn');
-  const originalHtml = btn.innerHTML;
-  btn.innerHTML = 'Loading live data...';
-  btn.disabled = true;
+  if (btn) {
+    btn.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#f59e0b;border-radius:50%;"></span> Loading live data...';
+    btn.disabled = true;
+  }
   try {
-    let res = null;
+    let buffer = null;
     try {
-      res = await fetch(EXCEL_URL);
-    } catch (err) {
-      console.warn("Standard share link fetch failed, trying direct download endpoint...", err);
-      res = await fetch(DIRECT_DOWNLOAD_URL);
+      buffer = await fetchFileBuffer(DIRECT_DOWNLOAD_URL);
+    } catch (err1) {
+      console.warn("Direct download failed, trying standard share link...", err1);
+      buffer = await fetchFileBuffer(EXCEL_URL);
     }
-    if (!res || !res.ok) {
-      res = await fetch(DIRECT_DOWNLOAD_URL);
-    }
-    if (!res.ok) throw new Error("Network response was not ok (status " + res.status + ")");
-    const buffer = await res.arrayBuffer();
     const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: false });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
@@ -1300,28 +1321,56 @@ async function fetchLiveData() {
       rec.ctc = Number(rec.ctc) || 0;
       return rec;
     });
-    RECORDS = newRecords;
-    initFilterDefaults();
-    buildFilterUI();
-    renderAll();
+    if (newRecords.length > 0) {
+      RECORDS = newRecords;
+      initFilterDefaults();
+      buildFilterUI();
+      renderAll();
+      lastFetchTime = Date.now();
+    }
+    if (btn) {
+      btn.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;"></span> Live data connected';
+      btn.disabled = false;
+    }
   } catch (err) {
-    alert('Could not fetch live data.\n\n' + err.message);
+    console.error("Live fetch error:", err);
+    if (btn) {
+      btn.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:50%;"></span> Live data offline';
+      btn.disabled = false;
+    }
   } finally {
-    btn.innerHTML = originalHtml;
-    btn.disabled = false;
+    isFetchingLive = false;
   }
 }
 
-document.getElementById('uploadBtn').addEventListener('click', fetchLiveData);
+document.getElementById('uploadBtn').addEventListener('click', () => fetchLiveData(true));
 
 /* =========================================================================
-   INIT
+   INIT & AUTO REFRESH HANDLERS
    ========================================================================= */
 initFilterDefaults();
 buildFilterUI();
 initCharts();
 renderAll();
-fetchLiveData();
+
+// Auto fetch on load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => fetchLiveData(true));
+} else {
+  fetchLiveData(true);
+}
+
+// Auto re-fetch on navigation or back/forward cache restore
+window.addEventListener('pageshow', () => {
+  fetchLiveData(true);
+});
+
+// Auto refresh on tab visibility focus
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    fetchLiveData(false);
+  }
+});
 
 </script>
 </body>
