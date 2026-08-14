@@ -330,13 +330,13 @@ footer .brand-line img{height:14px;opacity:.6;}
   .grid-3{grid-template-columns:1fr 1fr;}
 }
 /* =========================================================================
-   BROWSER-STYLE TAB NAVIGATION BAR
+   SAFARI BROWSER-STYLE TAB NAVIGATION BAR
    ========================================================================= */
 .browser-tab-nav {
-  background: #0d2825;
-  background: linear-gradient(180deg, #0a1f1d 0%, #0e2b27 100%);
+  background: #081a18;
+  background: linear-gradient(180deg, #071715 0%, #0d2825 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -345,8 +345,8 @@ footer .brand-line img{height:14px;opacity:.6;}
 .browser-tabbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px 0 16px;
+  gap: 10px;
+  padding: 8px 16px 0 14px;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -354,43 +354,63 @@ footer .brand-line img{height:14px;opacity:.6;}
 .browser-tabbar::-webkit-scrollbar {
   display: none;
 }
+.browser-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px 6px 2px;
+  flex-shrink: 0;
+}
+.win-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.win-red { background: #ff5f56; border: 1px solid #e0443e; box-shadow: 0 0 3px rgba(255,95,86,0.3); }
+.win-yellow { background: #ffbd2e; border: 1px solid #dea123; box-shadow: 0 0 3px rgba(255,189,46,0.3); }
+.win-green { background: #27c93f; border: 1px solid #1aab29; box-shadow: 0 0 3px rgba(39,201,63,0.3); }
 
 .browser-tabs-track {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.browser-tabs-track::-webkit-scrollbar {
+  display: none;
 }
 .nav-browser-tab {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px 9px 14px;
-  border-radius: 8px 8px 0 0;
+  padding: 8px 16px 9px 13px;
+  border-radius: 9px 9px 0 0;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(234, 246, 243, 0.65);
+  color: rgba(234, 246, 243, 0.7);
   text-decoration: none;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: none;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   flex-shrink: 0;
 }
 .nav-browser-tab:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.11);
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 .nav-browser-tab.active {
-  background: #1B5751;
-  background: linear-gradient(180deg, #246B64 0%, #1B5751 100%);
+  background: linear-gradient(180deg, #246B64 0%, #174b46 100%);
   color: #ffffff;
   font-weight: 700;
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .nav-browser-tab.active::after {
   content: '';
@@ -399,7 +419,7 @@ footer .brand-line img{height:14px;opacity:.6;}
   left: 0;
   right: 0;
   height: 2px;
-  background: #1B5751;
+  background: #174b46;
 }
 .nav-tab-icon {
   display: flex;
@@ -421,7 +441,8 @@ footer .brand-line img{height:14px;opacity:.6;}
 }
 
 @media (max-width:760px){
-  .browser-tabbar { padding: 6px 8px 0 8px; }
+  .browser-tabbar { padding: 6px 8px 0 8px; gap: 6px; }
+  .browser-window-controls { display: none; }
   .nav-browser-tab { padding: 6px 12px 7px 10px; font-size: 11px; }
   .wrap{padding:0 14px 48px;}
   .topbar-inner{flex-wrap:wrap;padding:14px 16px;gap:10px;}
@@ -447,6 +468,11 @@ footer .brand-line img{height:14px;opacity:.6;}
 <!-- BROWSER TAB NAVIGATION MENU -->
 <nav class="browser-tab-nav" aria-label="Dashboard navigation tabs">
   <div class="browser-tabbar">
+    <div class="browser-window-controls" aria-hidden="true">
+      <span class="win-dot win-red"></span>
+      <span class="win-dot win-yellow"></span>
+      <span class="win-dot win-green"></span>
+    </div>
     <div class="browser-tabs-track">
       <a href="index.html" class="nav-browser-tab" title="Hisense Sales Dashboard">
         <span class="nav-tab-icon">
@@ -530,8 +556,8 @@ footer .brand-line img{height:14px;opacity:.6;}
       <span>Download Report</span>
     </a>
     <button class="upload-btn" id="uploadBtn" title="Refresh live data" style="display: flex; align-items: center; gap: 6px;">
-      <span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;"></span>
-      Live data connected
+      <span style="display:inline-block;width:8px;height:8px;background:#f59e0b;border-radius:50%;"></span>
+      Connecting live data...
     </button>
     <button class="reset-btn" id="resetBtn">Reset filters</button>
   </div>
@@ -793,6 +819,10 @@ function baseBarOptions(opts = {}) {
 const charts = {};
 function makeBarChart(id, colors, opts = {}) {
   const el = document.getElementById(id);
+  if (!el) {
+    console.warn('Canvas element not found for bar chart:', id);
+    return null;
+  }
   charts[id] = new Chart(el, {
     type: 'bar',
     data: { labels: [], datasets: [{ data: [], backgroundColor: colors, borderRadius: 5, maxBarThickness: opts.thick || 34 }] },
@@ -802,6 +832,10 @@ function makeBarChart(id, colors, opts = {}) {
 }
 function makeDonut(id) {
   const el = document.getElementById(id);
+  if (!el) {
+    console.warn('Canvas element not found for donut:', id);
+    return null;
+  }
   charts[id] = new Chart(el, {
     type: 'doughnut',
     data: { labels: [], datasets: [{ data: [], backgroundColor: DONUT_COLORS, borderColor: '#fff', borderWidth: 2 }] },
@@ -821,46 +855,50 @@ function initCharts() {
   makeBarChart('chartRegionPresent', PALETTE.light, { tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' present' } });
   makeBarChart('chartStateAtt', PALETTE.dark, { rotate: 40, tooltipCallbacks: { label: c => fmtPct(c.parsed.y) } });
   makeBarChart('chartStateCount', PALETTE.light, { rotate: 40, tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' person-days' } });
-  makeBarChart('chartRH', PALETTE.mid, { rotate: 35, tooltipCallbacks: { label: c => fmtPct(c.parsed.y) } });
-  makeBarChart('chartCity', PALETTE.mid, { rotate: 20, tooltipCallbacks: { label: c => fmtPct(c.parsed.y) } });
+  makeBarChart('chartRSM', PALETTE.mid, { rotate: 35, tooltipCallbacks: { label: c => fmtPct(c.parsed.y) } });
+  makeBarChart('chartTL', PALETTE.mid, { rotate: 35, tooltipCallbacks: { label: c => fmtPct(c.parsed.y) } });
   makeBarChart('chartLateRegion', PALETTE.coral, { tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' late' } });
   makeBarChart('chartEarlyRegion', PALETTE.coral, { tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' early-out' } });
   makeDonut('chartStatusMix');
   makeDonut('chartRoleMix');
 
   const trendEl = document.getElementById('chartTrend');
-  charts.trend = new Chart(trendEl, {
-    data: {
-      labels: [],
-      datasets: [
-        { type: 'bar', label: 'Present', data: [], backgroundColor: 'rgba(27,87,81,.85)', borderRadius: 5, yAxisID: 'y', order: 2, maxBarThickness: 40 },
-        { type: 'line', label: 'Attendance %', data: [], borderColor: PALETTE.amber, backgroundColor: PALETTE.amber, tension: .35, yAxisID: 'y1', order: 1, pointRadius: 3, pointBackgroundColor: '#fff', pointBorderColor: PALETTE.amber, pointBorderWidth: 2, borderWidth: 2.5 },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false, animation: { duration: 420 },
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, padding: 14 } },
-        tooltip: { backgroundColor: '#12241F', padding: 10, cornerRadius: 8, callbacks: { label: c => c.dataset.yAxisID === 'y' ? ' ' + fmtNum(c.parsed.y) + ' present' : ' ' + fmtPct(c.parsed.y) } }
+  if (trendEl) {
+    charts.trend = new Chart(trendEl, {
+      data: {
+        labels: [],
+        datasets: [
+          { type: 'bar', label: 'Present', data: [], backgroundColor: 'rgba(27,87,81,.85)', borderRadius: 5, yAxisID: 'y', order: 2, maxBarThickness: 40 },
+          { type: 'line', label: 'Attendance %', data: [], borderColor: PALETTE.amber, backgroundColor: PALETTE.amber, tension: .35, yAxisID: 'y1', order: 1, pointRadius: 3, pointBackgroundColor: '#fff', pointBorderColor: PALETTE.amber, pointBorderWidth: 2, borderWidth: 2.5 },
+        ]
       },
-      scales: {
-        x: { grid: { display: false } },
-        y: { position: 'left', grid: { color: PALETTE.grid }, beginAtZero: true },
-        y1: { position: 'right', grid: { display: false }, beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: { duration: 420 },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, padding: 14 } },
+          tooltip: { backgroundColor: '#12241F', padding: 10, cornerRadius: 8, callbacks: { label: c => c.dataset.yAxisID === 'y' ? ' ' + fmtNum(c.parsed.y) + ' present' : ' ' + fmtPct(c.parsed.y) } }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { position: 'left', grid: { color: PALETTE.grid }, beginAtZero: true },
+          y1: { position: 'right', grid: { display: false }, beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+        }
       }
-    }
-  });
+    });
+  }
 }
 
 function updateBarChart(id, entries) {
   const c = charts[id];
+  if (!c) return;
   c.data.labels = entries.map(e => e[0]);
   c.data.datasets[0].data = entries.map(e => e[1]);
   c.update();
 }
 function updateDonut(id, entries, colorMap) {
   const c = charts[id];
+  if (!c) return;
   c.data.labels = entries.map(e => e[0]);
   c.data.datasets[0].data = entries.map(e => e[1]);
   c.data.datasets[0].backgroundColor = colorMap ? entries.map(e => colorMap[e[0]] || '#999') : DONUT_COLORS;
@@ -952,16 +990,14 @@ function renderAll() {
   updateBarChart('chartStateAtt', stateAttEntries);
   updateBarChart('chartStateCount', stateCountEntries);
 
-  /* ---- RH / City ---- */
-  const byRH = groupBy(filtered, r => r.rhDisplay || r.rhName);
-  const rhDisplayMap = new Map();
-  filtered.forEach(r => { if (r.rhDisplay && !rhDisplayMap.has(r.rhDisplay)) rhDisplayMap.set(r.rhDisplay, r.rhDisplay); });
-  const rhAttEntries = sortMapDesc(new Map(Array.from(byRH.entries()).map(([k, v]) => [k, attendancePct(v)])));
-  updateBarChart('chartRH', rhAttEntries);
+  /* ---- RSM / TL Performance ---- */
+  const byRSM = groupBy(filtered.filter(r => (r.rhRole === 'RSM' || (!r.rhRole && r.role === 'TL'))), r => r.rhDisplay || r.rhName);
+  const rsmAttEntries = sortMapDesc(new Map(Array.from(byRSM.entries()).map(([k, v]) => [k, attendancePct(v)])));
+  updateBarChart('chartRSM', rsmAttEntries);
 
-  const byCity = groupBy(filtered, r => r.city);
-  const cityAttEntries = sortMapDesc(new Map(Array.from(byCity.entries()).map(([k, v]) => [k, attendancePct(v)])));
-  updateBarChart('chartCity', cityAttEntries);
+  const byTL = groupBy(filtered.filter(r => (r.rhRole === 'TL' || (!r.rhRole && r.role === 'Promoter'))), r => r.rhDisplay || r.rhName);
+  const tlAttEntries = sortMapDesc(new Map(Array.from(byTL.entries()).map(([k, v]) => [k, attendancePct(v)])));
+  updateBarChart('chartTL', tlAttEntries);
 
   /* ---- Mix ---- */
   const statusEntries = sortMapDesc(sumBy(filtered, r => r.status, () => 1));
@@ -1243,6 +1279,13 @@ async function fetchLiveData(force = false) {
     const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: false });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    const userRoleLookup = {};
+    rows.forEach(r => {
+      const uName = String(r['User Name'] || '').trim();
+      const uRole = String(r['User Role'] || '').trim();
+      if (uName && uRole) userRoleLookup[uName] = uRole;
+    });
+
     const ALLOWED_ROLES = new Set(['Promoter', 'TL']);
     const newRecords = rows
       .filter(r => r['User Code'] && ALLOWED_ROLES.has(String(r['User Role'] || '').trim()))
@@ -1250,7 +1293,11 @@ async function fetchLiveData(force = false) {
         const rec = {};
         Object.keys(COLMAP).forEach(k => rec[COLMAP[k]] = r[k]);
         rec.role = String(rec.role || '').trim();
-        rec.rhDisplay = rec.rhName ? (rec.rhRole ? `${rec.rhName} (${rec.rhRole})` : rec.rhName) : '—';
+        const rawRhRole = String(r['RH Role'] || '').trim();
+        const rhName = String(rec.rhName || '').trim();
+        const inferredRhRole = rawRhRole || userRoleLookup[rhName] || (rec.role === 'TL' ? 'RSM' : 'TL');
+        rec.rhRole = inferredRhRole;
+        rec.rhDisplay = rhName ? `${rhName} (${inferredRhRole})` : '—';
         rec.date = toISO(r['Attendance Date']);
         rec.workMin = parseWorkMin(r['Working Hours']);
         rec.isLate = r['Is Late'] === 'Yes';
