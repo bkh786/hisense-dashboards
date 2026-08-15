@@ -682,8 +682,8 @@ const FILTER_DIMS = [
   { key: 'saleType',     label: 'Sale Type' },
   { key: 'rsm',          label: 'RSM Name' },
   { key: 'category',     label: 'Product' },
-  { key: 'subCat',       label: 'Product Sub Category' },
   { key: 'techCat',      label: 'Product Category' },
+  { key: 'subCat',       label: 'Product Sub Category' },
   { key: 'state',        label: 'State' },
   { key: 'tl',           label: 'TL Name' },
   { key: 'channelType',  label: 'Store Channel Type' },
@@ -722,10 +722,56 @@ function initFilterDefaults() {
   FILTER_DIMS.forEach(d => state.filters[d.key] = new Set());
 }
 
-function uniqueOptions(key) {
+function getAvailableOptions(key) {
   const s = new Set();
-  RECORDS.forEach(r => { if (r[key] !== null && r[key] !== undefined && r[key] !== '') s.add(r[key]); });
+  if (key === 'category') {
+    RECORDS.forEach(r => {
+      if (r.category !== null && r.category !== undefined && r.category !== '') s.add(r.category);
+    });
+  } else if (key === 'techCat') {
+    const prodSel = state.filters['category'];
+    RECORDS.forEach(r => {
+      if (r.techCat !== null && r.techCat !== undefined && r.techCat !== '') {
+        if (prodSel && prodSel.size > 0) {
+          if (prodSel.has(r.category)) s.add(r.techCat);
+        } else {
+          s.add(r.techCat);
+        }
+      }
+    });
+  } else if (key === 'subCat') {
+    const prodSel = state.filters['category'];
+    const catSel = state.filters['techCat'];
+    RECORDS.forEach(r => {
+      if (r.subCat !== null && r.subCat !== undefined && r.subCat !== '') {
+        const prodMatch = (!prodSel || prodSel.size === 0 || prodSel.has(r.category));
+        const catMatch = (!catSel || catSel.size === 0 || catSel.has(r.techCat));
+        if (prodMatch && catMatch) {
+          s.add(r.subCat);
+        }
+      }
+    });
+  } else {
+    RECORDS.forEach(r => {
+      if (r[key] !== null && r[key] !== undefined && r[key] !== '') s.add(r[key]);
+    });
+  }
   return Array.from(s).sort();
+}
+
+function pruneDependentFilters() {
+  const validTech = new Set(getAvailableOptions('techCat'));
+  if (state.filters['techCat']) {
+    for (const v of state.filters['techCat']) {
+      if (!validTech.has(v)) state.filters['techCat'].delete(v);
+    }
+  }
+  const validSub = new Set(getAvailableOptions('subCat'));
+  if (state.filters['subCat']) {
+    for (const v of state.filters['subCat']) {
+      if (!validSub.has(v)) state.filters['subCat'].delete(v);
+    }
+  }
 }
 
 function recordMatchesDims(r) {
@@ -1120,6 +1166,8 @@ function renderAll() {
 /* =========================================================================
    FILTER UI
    ========================================================================= */
+const filterWidgetControllers = {};
+
 function buildFilterUI() {
   const grid = document.getElementById('filterGrid');
   grid.innerHTML = '';
@@ -1141,7 +1189,6 @@ function buildFilterUI() {
     const wrap = document.createElement('div');
     wrap.className = 'msel';
     wrap.dataset.key = d.key;
-    const opts = uniqueOptions(d.key);
     wrap.innerHTML = `
       <button type="button" class="msel-btn">
         <span class="lbl">${d.label}</span>
@@ -1158,29 +1205,43 @@ function buildFilterUI() {
     grid.appendChild(wrap);
 
     const list = wrap.querySelector('.msel-list');
+    const btn = wrap.querySelector('.msel-btn');
+    const valSpan = wrap.querySelector('.val');
+    const searchInput = wrap.querySelector('.msel-search input');
+
     function renderOptList(filterText) {
-      const ft = (filterText || '').toLowerCase();
-      list.innerHTML = opts.filter(o => o.toLowerCase().includes(ft)).map(o => {
+      const searchVal = (filterText !== undefined) ? filterText : (searchInput.value || '');
+      const ft = searchVal.toLowerCase();
+      const currentOpts = getAvailableOptions(d.key);
+      list.innerHTML = currentOpts.filter(o => o.toLowerCase().includes(ft)).map(o => {
         const checked = state.filters[d.key].has(o) ? 'checked' : '';
         const id = 'opt_' + d.key + '_' + btoa(unescape(encodeURIComponent(o))).replace(/[^a-zA-Z0-9]/g, '');
         return `<label class="msel-opt" for="${id}"><input type="checkbox" id="${id}" value="${o.replace(/"/g, '&quot;')}" ${checked}><span>${o}</span></label>`;
       }).join('') || '<div style="padding:10px;color:var(--ink-faint);font-size:12px;">No matches</div>';
     }
-    renderOptList('');
 
-    const btn = wrap.querySelector('.msel-btn');
-    const valSpan = wrap.querySelector('.val');
     function refreshBtnLabel() {
       const sel = state.filters[d.key];
-      if (sel.size === 0) { valSpan.textContent = 'All'; btn.classList.remove('active'); }
+      if (!sel || sel.size === 0) { valSpan.textContent = 'All'; btn.classList.remove('active'); }
       else if (sel.size === 1) { valSpan.textContent = Array.from(sel)[0]; btn.classList.add('active'); }
       else { valSpan.innerHTML = sel.size + ' selected'; btn.classList.add('active'); }
     }
+
+    filterWidgetControllers[d.key] = {
+      renderOptList,
+      refreshBtnLabel,
+    };
+
+    renderOptList('');
     refreshBtnLabel();
 
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       document.querySelectorAll('.msel.open').forEach(m => { if (m !== wrap) m.classList.remove('open'); });
+      const willOpen = !wrap.classList.contains('open');
+      if (willOpen) {
+        renderOptList();
+      }
       wrap.classList.toggle('open');
     });
 
@@ -1188,16 +1249,41 @@ function buildFilterUI() {
       if (e.target.tagName !== 'INPUT') return;
       const v = e.target.value;
       if (e.target.checked) state.filters[d.key].add(v); else state.filters[d.key].delete(v);
-      refreshBtnLabel();
-      renderAll();
+      handleFilterSelectionChange(d.key);
     });
 
-    wrap.querySelector('.msel-search input').addEventListener('input', (e) => renderOptList(e.target.value));
-    wrap.querySelector('.clear-opt').addEventListener('click', () => { state.filters[d.key].clear(); renderOptList(wrap.querySelector('.msel-search input').value); refreshBtnLabel(); renderAll(); });
-    wrap.querySelector('.all-opt').addEventListener('click', () => { opts.forEach(o => state.filters[d.key].add(o)); renderOptList(wrap.querySelector('.msel-search input').value); refreshBtnLabel(); renderAll(); });
+    searchInput.addEventListener('input', (e) => renderOptList(e.target.value));
+
+    wrap.querySelector('.clear-opt').addEventListener('click', () => {
+      state.filters[d.key].clear();
+      handleFilterSelectionChange(d.key);
+    });
+
+    wrap.querySelector('.all-opt').addEventListener('click', () => {
+      const currentOpts = getAvailableOptions(d.key);
+      currentOpts.forEach(o => state.filters[d.key].add(o));
+      handleFilterSelectionChange(d.key);
+    });
   });
 
   document.addEventListener('click', () => document.querySelectorAll('.msel.open').forEach(m => m.classList.remove('open')));
+}
+
+function handleFilterSelectionChange(changedKey) {
+  if (changedKey === 'category' || changedKey === 'techCat' || changedKey === 'subCat') {
+    pruneDependentFilters();
+    ['category', 'techCat', 'subCat'].forEach(k => {
+      if (filterWidgetControllers[k]) {
+        filterWidgetControllers[k].renderOptList();
+        filterWidgetControllers[k].refreshBtnLabel();
+      }
+    });
+  } else {
+    if (filterWidgetControllers[changedKey]) {
+      filterWidgetControllers[changedKey].refreshBtnLabel();
+    }
+  }
+  renderAll();
 }
 
 document.getElementById('resetBtn').addEventListener('click', () => {
