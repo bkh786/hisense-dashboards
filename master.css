@@ -60,8 +60,33 @@ header.topbar{
   box-shadow:0 4px 24px rgba(9,33,30,.28);
 }
 .topbar-inner{
-  max-width:1500px;margin:0 auto;padding:16px 28px;
-  display:flex;align-items:center;gap:22px;
+  max-width:1500px;margin:0 auto;padding:12px 28px;
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  position:relative;
+}
+.topbar-left{
+  display:flex;align-items:center;gap:18px;
+}
+.channelplay-badge-wrap{
+  display:flex;align-items:center;justify-content:center;
+}
+.channelplay-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:#ffffff;
+  padding:5px 16px;border-radius:999px;
+  box-shadow:0 0 14px rgba(45,212,191,.22), 0 2px 8px rgba(0,0,0,.18), 0 0 0 1px rgba(255,255,255,.8);
+  transition:all .2s ease-in-out;
+  text-decoration:none;
+}
+.channelplay-badge:hover{
+  transform:translateY(-1px);
+  box-shadow:0 0 22px rgba(45,212,191,.45), 0 4px 12px rgba(0,0,0,.24), 0 0 0 1.5px rgba(255,255,255,.95);
+}
+.channelplay-logo-img{
+  height:24px;width:auto;display:block;object-fit:contain;
+}
+.topbar-right{
+  display:flex;align-items:center;gap:10px;
 }
 .logo-wrap{
   position:relative; display:flex; align-items:center; height:40px;
@@ -215,6 +240,47 @@ header.topbar{
   content:"";position:absolute;top:-40%;left:-10%;width:75%;height:120%;
   background:linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%);
   transform:rotate(-12deg);
+  pointer-events:none;
+  z-index:1;
+}
+
+/* Peak Day Running Pulse Highlight */
+.kpi.kpi-peak-pulse{
+  box-shadow:0 0 22px rgba(45,212,191,.4), var(--shadow-md);
+  border:1px solid rgba(45,212,191,.55);
+}
+.kpi.kpi-peak-pulse .kpi-border-beam{
+  position:absolute; inset:0;
+  border-radius:var(--radius);
+  overflow:hidden;
+  pointer-events:none;
+  z-index:1;
+}
+.kpi.kpi-peak-pulse .kpi-border-beam::before{
+  content:"";
+  position:absolute;
+  inset:-120%;
+  background:conic-gradient(
+    transparent 0deg,
+    transparent 270deg,
+    rgba(45,212,191,.35) 305deg,
+    #14b8a6 330deg,
+    #2dd4bf 348deg,
+    #a7f3d0 356deg,
+    #ffffff 360deg
+  );
+  animation:spinPulseBeam 3s linear infinite;
+}
+.kpi.kpi-peak-pulse .kpi-border-beam::after{
+  content:"";
+  position:absolute;
+  inset:2px;
+  border-radius:calc(var(--radius) - 2px);
+  background:linear-gradient(155deg, var(--k1) 0%, var(--k2) 100%);
+}
+@keyframes spinPulseBeam{
+  0%{transform:rotate(0deg);}
+  100%{transform:rotate(360deg);}
 }
 .kpi .kpi-icon{
   width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.18);
