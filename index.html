@@ -174,8 +174,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       <h2 class="section-title">Zone &amp; State Performance</h2>
     </div>
     <div class="grid-2">
-      <div class="card"><div class="card-title">Zone-wise Sales Value</div><div class="chart-box"><canvas id="chartZoneValue"></canvas></div></div>
-      <div class="card"><div class="card-title">Zone-wise Units Sold</div><div class="chart-box"><canvas id="chartZoneUnits"></canvas></div></div>
+      <div class="card"><div class="card-title">Zone-wise Sales Value<span class="tag">TV &amp; AC Stacked</span></div><div class="chart-box"><canvas id="chartZoneValue"></canvas></div></div>
+      <div class="card"><div class="card-title">Zone-wise Units Sold<span class="tag amber">TV &amp; AC Stacked</span></div><div class="chart-box"><canvas id="chartZoneUnits"></canvas></div></div>
     </div>
     <div class="grid-2" style="margin-top:16px;">
       <div class="card"><div class="card-title">State-wise Sales Value</div><div class="chart-box"><canvas id="chartStateValue"></canvas></div></div>
@@ -550,6 +550,129 @@ const pieLabelsPlugin = {
 };
 Chart.register(pieLabelsPlugin);
 
+const stackedBarLabelsPlugin = {
+  id: 'stackedBarLabels',
+  afterDraw(chart) {
+    if (!chart.config.options?.plugins?.stackedBarLabels?.display) return;
+    const ctx = chart.ctx;
+    const datasets = chart.data.datasets;
+    if (!datasets || datasets.length < 2) return;
+
+    const metaList = datasets.map((_, i) => chart.getDatasetMeta(i));
+    const dataCount = datasets[0].data ? datasets[0].data.length : 0;
+
+    for (let index = 0; index < dataCount; index++) {
+      let colTotal = 0;
+      datasets.forEach(ds => {
+        const val = Number(ds.data[index]) || 0;
+        colTotal += val;
+      });
+      if (colTotal === 0) continue;
+
+      datasets.forEach((ds, dsIndex) => {
+        const meta = metaList[dsIndex];
+        if (!meta || meta.hidden) return;
+        const el = meta.data[index];
+        const val = Number(ds.data[index]) || 0;
+        if (!el || val <= 0) return;
+
+        const pct = Math.round((val / colTotal) * 100);
+        if (pct < 4) return;
+
+        const segHeight = Math.abs(el.base - el.y);
+        if (segHeight < 11) return;
+
+        const centerY = (el.y + el.base) / 2;
+        const centerX = el.x;
+
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10.5px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1;
+        ctx.fillText(`${pct}%`, centerX, centerY);
+        ctx.restore();
+      });
+    }
+  }
+};
+Chart.register(stackedBarLabelsPlugin);
+
+function makeStackedBarChart(id, opts = {}) {
+  const el = document.getElementById(id);
+  charts[id] = new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'TV', data: [], backgroundColor: PALETTE.dark, maxBarThickness: opts.thick || 36, stack: 'zoneStack' },
+        { label: 'AC', data: [], backgroundColor: PALETTE.amber, maxBarThickness: opts.thick || 36, stack: 'zoneStack' }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 420, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, padding: 12 } },
+        tooltip: {
+          backgroundColor: '#12241F', padding: 10, cornerRadius: 8,
+          titleFont: { weight: '700' },
+          callbacks: {
+            label(c) {
+              const datasetLabel = c.dataset.label || '';
+              const val = c.parsed.y;
+              const chartInstance = c.chart;
+              const ds0 = Number(chartInstance.data.datasets[0].data[c.dataIndex]) || 0;
+              const ds1 = Number(chartInstance.data.datasets[1].data[c.dataIndex]) || 0;
+              const tot = ds0 + ds1;
+              const pct = tot > 0 ? ((val / tot) * 100).toFixed(1) + '%' : '0%';
+              const valStr = opts.isCurrency ? fmtINR(val) : (fmtNum(val) + ' units');
+              return ` ${datasetLabel}: ${valStr} (${pct})`;
+            },
+            footer(items) {
+              if (!items || !items.length) return '';
+              const chartInstance = items[0].chart;
+              const idx = items[0].dataIndex;
+              const ds0 = Number(chartInstance.data.datasets[0].data[idx]) || 0;
+              const ds1 = Number(chartInstance.data.datasets[1].data[idx]) || 0;
+              const tot = ds0 + ds1;
+              return ' Total: ' + (opts.isCurrency ? fmtINR(tot) : (fmtNum(tot) + ' units'));
+            }
+          }
+        },
+        stackedBarLabels: { display: true }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: {
+          stacked: true,
+          grid: { color: PALETTE.grid },
+          ticks: {
+            font: { size: 10 },
+            callback: v => opts.isCurrency ? fmtCompactINR(v) : fmtNum(v)
+          },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+  return charts[id];
+}
+
+function updateStackedBarChart(id, labels, tvData, acData) {
+  const c = charts[id];
+  if (!c) return;
+  c.data.labels = labels;
+  c.data.datasets[0].data = tvData;
+  c.data.datasets[1].data = acData;
+  c.update();
+}
+
 function makePieChart(id) {
   const el = document.getElementById(id);
   charts[id] = new Chart(el, {
@@ -573,8 +696,8 @@ function makePieChart(id) {
 }
 
 function initCharts() {
-  makeBarChart('chartZoneValue', PALETTE.dark, { tooltipCallbacks: { label: c => fmtINR(c.parsed.y) } });
-  makeBarChart('chartZoneUnits', PALETTE.light, { tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' units' } });
+  makeStackedBarChart('chartZoneValue', { isCurrency: true });
+  makeStackedBarChart('chartZoneUnits', { isCurrency: false });
   makeBarChart('chartStateValue', PALETTE.dark, { rotate: 40, tooltipCallbacks: { label: c => fmtINR(c.parsed.y) } });
   makeBarChart('chartStateCount', PALETTE.light, { rotate: 40, tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' txns' } });
   makeBarChart('chartTL', PALETTE.mid, { rotate: 35, tooltipCallbacks: { label: c => fmtINR(c.parsed.y) } });
@@ -735,12 +858,21 @@ function renderAll() {
 
   /* ---- Zone / State ---- */
   const zoneOrder = ['North', 'South', 'East', 'West'];
-  const zoneValMap = sumBy(sales, r => r.zone, r => r.value);
-  const zoneUnitMap = sumBy(sales, r => r.zone, r => r.qty);
-  const zoneEntries = zoneOrder.filter(z => zoneValMap.has(z)).map(z => [z, zoneValMap.get(z)]);
-  const zoneUnitEntries = zoneOrder.filter(z => zoneUnitMap.has(z)).map(z => [z, zoneUnitMap.get(z)]);
-  updateBarChart('chartZoneValue', zoneEntries);
-  updateBarChart('chartZoneUnits', zoneUnitEntries);
+  const zoneTvVal = sumBy(tvRows, r => r.zone, r => r.value);
+  const zoneAcVal = sumBy(acRows, r => r.zone, r => r.value);
+  const zoneTvQty = sumBy(tvRows, r => r.zone, r => r.qty);
+  const zoneAcQty = sumBy(acRows, r => r.zone, r => r.qty);
+
+  const activeZones = zoneOrder.filter(z => (zoneTvVal.get(z) || 0) + (zoneAcVal.get(z) || 0) > 0 || (zoneTvQty.get(z) || 0) + (zoneAcQty.get(z) || 0) > 0);
+  const zonesToDisplay = activeZones.length > 0 ? activeZones : zoneOrder;
+
+  const tvValData = zonesToDisplay.map(z => zoneTvVal.get(z) || 0);
+  const acValData = zonesToDisplay.map(z => zoneAcVal.get(z) || 0);
+  const tvQtyData = zonesToDisplay.map(z => zoneTvQty.get(z) || 0);
+  const acQtyData = zonesToDisplay.map(z => zoneAcQty.get(z) || 0);
+
+  updateStackedBarChart('chartZoneValue', zonesToDisplay, tvValData, acValData);
+  updateStackedBarChart('chartZoneUnits', zonesToDisplay, tvQtyData, acQtyData);
 
   const stateValMap = sortMapDesc(sumBy(sales, r => r.state, r => r.value));
   const stateCntMap = sortMapDesc(sumBy(sales, r => r.state, () => 1));
