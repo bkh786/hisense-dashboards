@@ -1145,7 +1145,6 @@ function renderAll() {
   renderLeaderboard('lbBottomAC', bottomAcList, { fmt: v => fmtNum(v) + ' units', bottom: true });
 
   /* ---- Regional Promoter Leaderboards (Promoter role only) ---- */
-  const promoterSales = sales.filter(isPromoterRecord);
   const promValue = sumBy(promoterSales, r => r.userCode, r => r.value);
 
   const ZONES = ['North', 'South', 'East', 'West'];
