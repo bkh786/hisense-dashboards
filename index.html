@@ -928,41 +928,54 @@ function renderAll() {
     }
   }
 
+  const SVG_ICONS = {
+    rupee: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 8h12M6 13l8.5 8M6 13h3a4.5 4.5 0 0 0 0-9"/></svg>`,
+    tv: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>`,
+    ac: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="9" rx="2"/><line x1="6" y1="17" x2="6" y2="13"/><line x1="12" y1="18" x2="12" y2="13"/><line x1="18" y1="17" x2="18" y2="13"/><line x1="5" y1="8.5" x2="9" y2="8.5"/><circle cx="17.5" cy="8.5" r="1" fill="currentColor"/></svg>`,
+    units: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
+    skus: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h1.5v14H4zm3.5 0h2v14h-2zm4 0h1.5v14h-1.5zm3.5 0h2v14h-2zm4 0h1.5v14H19z" fill="currentColor"/></svg>`,
+    b2b: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><line x1="9" y1="7" x2="9" y2="7.01"/><line x1="15" y1="7" x2="15" y2="7.01"/><line x1="9" y1="11" x2="9" y2="11.01"/><line x1="15" y1="11" x2="15" y2="11.01"/><line x1="9" y1="15" x2="9" y2="15.01"/><line x1="15" y1="15" x2="15" y2="15.01"/><path d="M10 21v-4h4v4"/></svg>`,
+    retail: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+    peak: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+    roi: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+    promoter: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+  };
+
   const kpis = [
     // --- ROW 1 ---
     {
       label: 'Total Sales Value',
       value: fmtINR(totalValue),
       sub: 'Daily Avg: ' + fmtCompactINR(dailyAvgTotalVal) + ' / day',
-      icon: '\u20B9',
+      icon: SVG_ICONS.rupee,
       grad: ['#123B37', '#1F5C56']
     },
     {
       label: 'TV Sales Value',
       value: fmtINR(tvValue),
       sub: `${tvValPct}% of total \u00b7 ${fmtCompactINR(dailyAvgTvVal)} / day`,
-      icon: '\u25A2',
+      icon: SVG_ICONS.tv,
       grad: ['#8A5A17', '#D98A2B']
     },
     {
       label: 'AC Sales Value',
       value: fmtINR(acValue),
       sub: `${acValPct}% of total \u00b7 ${fmtCompactINR(dailyAvgAcVal)} / day`,
-      icon: '\u2744',
+      icon: SVG_ICONS.ac,
       grad: ['#B5731F', '#F0A63B']
     },
     {
       label: 'Total Units Sold',
       value: fmtNum(totalUnits),
       sub: `TV: ${fmtNum(tvUnits)} (${tvUnitPct}%) \u00b7 AC: ${fmtNum(acUnits)} (${acUnitPct}%)`,
-      icon: '\u25A4',
+      icon: SVG_ICONS.units,
       grad: ['#1B5751', '#2F7C72']
     },
     {
       label: 'Unique SKUs Sold',
       value: fmtNum(uniqueSkus),
       sub: `TV: ${fmtNum(tvSkus)} SKUs \u00b7 AC: ${fmtNum(acSkus)} SKUs`,
-      icon: '\u25C9',
+      icon: SVG_ICONS.skus,
       grad: ['#2F7C72', '#4EAB9D']
     },
 
@@ -971,21 +984,21 @@ function renderAll() {
       label: 'B2B Sales Value',
       value: fmtINR(b2bValue),
       sub: `${b2bPct}% of total sales \u00b7 ${fmtNum(b2bUnits)} units`,
-      icon: '\u2317',
+      icon: SVG_ICONS.b2b,
       grad: ['#184E77', '#1E6091']
     },
     {
       label: 'Retail Sales Value',
       value: fmtINR(retailValue),
       sub: `${retailPct}% of total sales \u00b7 ${fmtNum(retailUnits)} units`,
-      icon: '\u2616',
+      icon: SVG_ICONS.retail,
       grad: ['#1A759F', '#168AAD']
     },
     {
       label: 'Peak Day Sales Value',
       value: fmtINR(peakDayVal),
       sub: `${peakDayPct}% of total \u00b7 on ${peakDayDateStr}`,
-      icon: '\u26A1',
+      icon: SVG_ICONS.peak,
       grad: ['#1E1B4B', '#4338CA'],
       isPulse: true
     },
@@ -993,14 +1006,14 @@ function renderAll() {
       label: 'ROI \u2013 Per Promoter',
       value: `${roi.toFixed(2)} <span style="font-size:11.5px;font-weight:700;opacity:0.9;">(${roiTargetPct}% of 15 target)</span>`,
       sub: 'avg. of ' + fmtNum(roiInfo.promoterCount) + ' promoters \u00b7 ' + fmtCompactINR(roiInfo.totalCtc) + ' CTC',
-      icon: '\u2191',
+      icon: SVG_ICONS.roi,
       grad: ['#8A3324', '#C64A38']
     },
     {
       label: 'Best Promoter',
       value: fmtINR(bestPromVal),
       sub: `${bestPromName}${bestPromLoc ? ` (${bestPromLoc})` : ''} \u00b7 ${bestPromStore}`,
-      icon: '\u263A',
+      icon: SVG_ICONS.promoter,
       grad: ['#5E2B85', '#8B5CF6']
     },
   ];
