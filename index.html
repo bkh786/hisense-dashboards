@@ -837,32 +837,161 @@ function renderAll() {
   document.getElementById('rowCount').textContent = fmtNum(filtered.length);
   document.getElementById('salesCount').textContent = fmtNum(sales.length);
 
-  /* ---- KPIs ---- */
+  /* ---- KPIs Calculations ---- */
   const totalValue = sales.reduce((a, r) => a + r.value, 0);
   const totalUnits = sales.reduce((a, r) => a + r.qty, 0);
-  const uniqueSkus = new Set(sales.map(r => r.sku)).size;
-  const totalTxns = sales.length;
-  const activePromoters = new Set(sales.map(r => r.userCode)).size;
+  const uniqueSkus = new Set(sales.map(r => r.sku).filter(Boolean)).size;
+
+  // TV & AC breakdowns
   const tvRows = sales.filter(r => r.category === 'TV');
   const acRows = sales.filter(r => r.category === 'AC');
   const tvValue = tvRows.reduce((a, r) => a + r.value, 0);
   const acValue = acRows.reduce((a, r) => a + r.value, 0);
-  const tvSkus = new Set(tvRows.map(r => r.sku)).size;
-  const acSkus = new Set(acRows.map(r => r.sku)).size;
+  const tvUnits = tvRows.reduce((a, r) => a + r.qty, 0);
+  const acUnits = acRows.reduce((a, r) => a + r.qty, 0);
+  const tvSkus = new Set(tvRows.map(r => r.sku).filter(Boolean)).size;
+  const acSkus = new Set(acRows.map(r => r.sku).filter(Boolean)).size;
+
+  // Daily averages
+  const uniqueSaleDates = new Set(sales.map(r => r.saleDate).filter(Boolean));
+  const numDays = uniqueSaleDates.size || 1;
+  const dailyAvgTotalVal = totalValue / numDays;
+  const dailyAvgTvVal = tvValue / numDays;
+  const dailyAvgAcVal = acValue / numDays;
+
+  const tvValPct = totalValue > 0 ? ((tvValue / totalValue) * 100).toFixed(1) : '0.0';
+  const acValPct = totalValue > 0 ? ((acValue / totalValue) * 100).toFixed(1) : '0.0';
+  const tvUnitPct = totalUnits > 0 ? ((tvUnits / totalUnits) * 100).toFixed(1) : '0.0';
+  const acUnitPct = totalUnits > 0 ? ((acUnits / totalUnits) * 100).toFixed(1) : '0.0';
+
+  // B2B vs Retail breakdowns
+  const b2bRows = sales.filter(r => r.saleType && r.saleType.toLowerCase().includes('b2b'));
+  const retailRows = sales.filter(r => !r.saleType || !r.saleType.toLowerCase().includes('b2b'));
+  const b2bValue = b2bRows.reduce((a, r) => a + r.value, 0);
+  const retailValue = retailRows.reduce((a, r) => a + r.value, 0);
+  const b2bUnits = b2bRows.reduce((a, r) => a + r.qty, 0);
+  const retailUnits = retailRows.reduce((a, r) => a + r.qty, 0);
+  const b2bPct = totalValue > 0 ? ((b2bValue / totalValue) * 100).toFixed(1) : '0.0';
+  const retailPct = totalValue > 0 ? ((retailValue / totalValue) * 100).toFixed(1) : '0.0';
+
+  // Highest sales recorded in a day
+  const dailyValMap = new Map();
+  sales.forEach(r => {
+    if (r.saleDate) {
+      dailyValMap.set(r.saleDate, (dailyValMap.get(r.saleDate) || 0) + r.value);
+    }
+  });
+  let peakDate = '';
+  let peakDayVal = 0;
+  dailyValMap.forEach((val, date) => {
+    if (val > peakDayVal) {
+      peakDayVal = val;
+      peakDate = date;
+    }
+  });
+  const peakDayPct = totalValue > 0 ? ((peakDayVal / totalValue) * 100).toFixed(1) : '0.0';
+  const peakDayDateStr = peakDate ? new Date(peakDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '\u2014';
+
+  // ROI per promoter (% against targeted ROI of 15)
   const roiInfo = computeRoiAggregate(filtered, sales);
   const roi = roiInfo.roi;
+  const roiTargetPct = ((roi / 15) * 100).toFixed(1);
+
+  // Best Promoter (strictly Promoter role)
+  const promoterSales = sales.filter(isPromoterRecord);
+  const promSalesMap = sumBy(promoterSales, r => r.userCode, r => r.value);
+  const topPromEntries = sortMapDesc(promSalesMap);
+  let bestPromName = '\u2014';
+  let bestPromVal = 0;
+  let bestPromLoc = '';
+  let bestPromStore = '\u2014';
+
+  if (topPromEntries.length > 0) {
+    const topCode = topPromEntries[0][0];
+    bestPromVal = topPromEntries[0][1];
+    const topRow = promoterSales.find(r => r.userCode === topCode) || filtered.find(r => r.userCode === topCode);
+    if (topRow) {
+      bestPromName = topRow.promoter || topCode;
+      const locParts = [topRow.state, topRow.city].filter(Boolean);
+      bestPromLoc = locParts.join(', ');
+      bestPromStore = topRow.store || '\u2014';
+    }
+  }
 
   const kpis = [
-    { label: 'Total Sales Value', value: fmtINR(totalValue), sub: fmtCompactINR(totalValue), icon: '\u20B9', grad: ['#123B37', '#1F5C56'] },
-    { label: 'Total Units Sold', value: fmtNum(totalUnits), sub: 'units across all SKUs', icon: '\u25A4', grad: ['#1B5751', '#2F7C72'] },
-    { label: 'Unique SKUs Sold', value: fmtNum(uniqueSkus), sub: 'distinct SKUs moved', icon: '\u25C9', grad: ['#2F7C72', '#4EAB9D'] },
-    { label: 'Total Transactions', value: fmtNum(totalTxns), sub: 'logged sale entries', icon: '\u2317', grad: ['#3D9488', '#82C6BB'] },
-    { label: 'Active Promoters', value: fmtNum(activePromoters), sub: 'with sales logged', icon: '\u263A', grad: ['#1B5751', '#3D9488'] },
-    { label: 'TV Sales Value', value: fmtINR(tvValue), sub: fmtCompactINR(tvValue), icon: '\u25A2', grad: ['#8A5A17', '#D98A2B'] },
-    { label: 'AC Sales Value', value: fmtINR(acValue), sub: fmtCompactINR(acValue), icon: '\u2744', grad: ['#B5731F', '#F0A63B'] },
-    { label: 'TV SKUs Sold', value: fmtNum(tvSkus), sub: 'distinct TV SKUs', icon: '\u25A2', grad: ['#A3671F', '#E2984A'] },
-    { label: 'AC SKUs Sold', value: fmtNum(acSkus), sub: 'distinct AC SKUs', icon: '\u2744', grad: ['#C6803A', '#F5BE73'] },
-    { label: 'ROI \u2013 Per Promoter', value: roi.toFixed(2), sub: 'avg. of ' + fmtNum(roiInfo.promoterCount) + ' promoters \u00b7 ' + fmtCompactINR(roiInfo.totalCtc) + ' CTC', icon: '\u2191', grad: ['#8A3324', '#C64A38'] },
+    // --- ROW 1 ---
+    {
+      label: 'Total Sales Value',
+      value: fmtINR(totalValue),
+      sub: 'Daily Avg: ' + fmtCompactINR(dailyAvgTotalVal) + ' / day',
+      icon: '\u20B9',
+      grad: ['#123B37', '#1F5C56']
+    },
+    {
+      label: 'TV Sales Value',
+      value: fmtINR(tvValue),
+      sub: `${tvValPct}% of total \u00b7 ${fmtCompactINR(dailyAvgTvVal)} / day`,
+      icon: '\u25A2',
+      grad: ['#8A5A17', '#D98A2B']
+    },
+    {
+      label: 'AC Sales Value',
+      value: fmtINR(acValue),
+      sub: `${acValPct}% of total \u00b7 ${fmtCompactINR(dailyAvgAcVal)} / day`,
+      icon: '\u2744',
+      grad: ['#B5731F', '#F0A63B']
+    },
+    {
+      label: 'Total Units Sold',
+      value: fmtNum(totalUnits),
+      sub: `TV: ${fmtNum(tvUnits)} (${tvUnitPct}%) \u00b7 AC: ${fmtNum(acUnits)} (${acUnitPct}%)`,
+      icon: '\u25A4',
+      grad: ['#1B5751', '#2F7C72']
+    },
+    {
+      label: 'Unique SKUs Sold',
+      value: fmtNum(uniqueSkus),
+      sub: `TV: ${fmtNum(tvSkus)} SKUs \u00b7 AC: ${fmtNum(acSkus)} SKUs`,
+      icon: '\u25C9',
+      grad: ['#2F7C72', '#4EAB9D']
+    },
+
+    // --- ROW 2 ---
+    {
+      label: 'B2B Sales Value',
+      value: fmtINR(b2bValue),
+      sub: `${b2bPct}% of total sales \u00b7 ${fmtNum(b2bUnits)} units`,
+      icon: '\u2317',
+      grad: ['#184E77', '#1E6091']
+    },
+    {
+      label: 'Retail Sales Value',
+      value: fmtINR(retailValue),
+      sub: `${retailPct}% of total sales \u00b7 ${fmtNum(retailUnits)} units`,
+      icon: '\u2616',
+      grad: ['#1A759F', '#168AAD']
+    },
+    {
+      label: 'Peak Day Sales Value',
+      value: fmtINR(peakDayVal),
+      sub: `${peakDayPct}% of total \u00b7 on ${peakDayDateStr}`,
+      icon: '\u2191',
+      grad: ['#A03E2D', '#D9534F']
+    },
+    {
+      label: 'ROI \u2013 Per Promoter',
+      value: `${roi.toFixed(2)} <span style="font-size:11.5px;font-weight:700;opacity:0.9;">(${roiTargetPct}% of 15 target)</span>`,
+      sub: 'avg. of ' + fmtNum(roiInfo.promoterCount) + ' promoters \u00b7 ' + fmtCompactINR(roiInfo.totalCtc) + ' CTC',
+      icon: '\u2191',
+      grad: ['#8A3324', '#C64A38']
+    },
+    {
+      label: 'Best Promoter',
+      value: fmtINR(bestPromVal),
+      sub: `${bestPromName}${bestPromLoc ? ` (${bestPromLoc})` : ''} \u00b7 ${bestPromStore}`,
+      icon: '\u263A',
+      grad: ['#5E2B85', '#8B5CF6']
+    },
   ];
   document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
     <div class="kpi" style="--k1:${k.grad[0]};--k2:${k.grad[1]}">
@@ -1213,7 +1342,7 @@ const COLMAP = {
   'RSM Code': 'rsmCode', 'RSM Name': 'rsm', 'Zone': 'zone', 'State': 'state', 'Product price': 'price',
   'Product': 'category', 'Product Category': 'techCat', 'Product Sub Category': 'subCat',
   'Sales Value': 'value', 'Store Channel Type': 'channelType', 'Store Channel Name': 'channelName',
-  'Partner Code': 'partnerCode', 'Promoter CTC': 'ctc', 'Promoter Salary': 'ctc', 'User Role': 'role', 'Role': 'role',
+  'Partner Code': 'partnerCode', 'Promoter CTC': 'ctc', 'Promoter Salary': 'ctc', 'User Role': 'role', 'Role': 'role', 'City': 'city', 'Store City': 'city', 'City Name': 'city',
 };
 /* Robustly parse a date cell: handles raw Excel serial numbers (numeric or string),
    JS Date objects, DD-MMM-YY, DD-MM-YYYY, or YYYY-MM-DD strings deterministically. */
