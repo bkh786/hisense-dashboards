@@ -162,7 +162,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       <div class="eyebrow">Trend</div>
     </div>
     <div class="card">
-      <div class="card-title">Daily Sales Value &amp; Units<span class="tag">Selected range</span></div>
+      <div class="card-title">Daily Sales Value &amp; Units<span class="tag">TV &amp; AC Stacked &middot; Selected range</span></div>
       <div class="chart-box tall"><canvas id="chartTrend"></canvas></div>
     </div>
   </div>
@@ -555,21 +555,29 @@ const stackedBarLabelsPlugin = {
   afterDraw(chart) {
     if (!chart.config.options?.plugins?.stackedBarLabels?.display) return;
     const ctx = chart.ctx;
-    const datasets = chart.data.datasets;
-    if (!datasets || datasets.length < 2) return;
+    // Collect stacked bar datasets only
+    const barDatasets = [];
+    const metaList = [];
+    chart.data.datasets.forEach((ds, i) => {
+      const type = ds.type || chart.config.type;
+      if (type === 'bar' && ds.stack) {
+        barDatasets.push(ds);
+        metaList.push(chart.getDatasetMeta(i));
+      }
+    });
 
-    const metaList = datasets.map((_, i) => chart.getDatasetMeta(i));
-    const dataCount = datasets[0].data ? datasets[0].data.length : 0;
+    if (barDatasets.length < 2) return;
+    const dataCount = barDatasets[0].data ? barDatasets[0].data.length : 0;
 
     for (let index = 0; index < dataCount; index++) {
       let colTotal = 0;
-      datasets.forEach(ds => {
+      barDatasets.forEach(ds => {
         const val = Number(ds.data[index]) || 0;
         colTotal += val;
       });
       if (colTotal === 0) continue;
 
-      datasets.forEach((ds, dsIndex) => {
+      barDatasets.forEach((ds, dsIndex) => {
         const meta = metaList[dsIndex];
         if (!meta || meta.hidden) return;
         const el = meta.data[index];
@@ -587,7 +595,7 @@ const stackedBarLabelsPlugin = {
 
         ctx.save();
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 10.5px Inter, sans-serif';
+        ctx.font = 'bold 10px Inter, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.shadowColor = 'rgba(0,0,0,0.6)';
@@ -712,8 +720,9 @@ function initCharts() {
     data: {
       labels: [],
       datasets: [
-        { type: 'bar', label: 'Sales Value', data: [], backgroundColor: 'rgba(27,87,81,.85)', borderRadius: 5, yAxisID: 'y', order: 2, maxBarThickness: 40 },
-        { type: 'line', label: 'Units Sold', data: [], borderColor: PALETTE.amber, backgroundColor: PALETTE.amber, tension: .35, yAxisID: 'y1', order: 1, pointRadius: 3, pointBackgroundColor: '#fff', pointBorderColor: PALETTE.amber, pointBorderWidth: 2, borderWidth: 2.5 },
+        { type: 'bar', label: 'TV Sales Value', data: [], backgroundColor: 'rgba(27,87,81,.88)', stack: 'dailySalesStack', yAxisID: 'y', order: 3, maxBarThickness: 38 },
+        { type: 'bar', label: 'AC Sales Value', data: [], backgroundColor: 'rgba(240,166,59,.88)', stack: 'dailySalesStack', yAxisID: 'y', order: 2, maxBarThickness: 38 },
+        { type: 'line', label: 'Units Sold', data: [], borderColor: '#E2604B', backgroundColor: '#E2604B', tension: .35, yAxisID: 'y1', order: 1, pointRadius: 3, pointBackgroundColor: '#fff', pointBorderColor: '#E2604B', pointBorderWidth: 2, borderWidth: 2.5 },
       ]
     },
     options: {
@@ -724,13 +733,35 @@ function initCharts() {
         legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, padding: 14 } },
         tooltip: {
           backgroundColor: '#12241F', padding: 10, cornerRadius: 8,
-          callbacks: { label: c => c.dataset.yAxisID === 'y' ? ' ' + fmtINR(c.parsed.y) : ' ' + fmtNum(c.parsed.y) + ' units' }
-        }
+          callbacks: {
+            label(c) {
+              if (c.dataset.yAxisID === 'y1') {
+                return ` Units Sold: ${fmtNum(c.parsed.y)} units`;
+              }
+              const chartInstance = c.chart;
+              const ds0 = Number(chartInstance.data.datasets[0].data[c.dataIndex]) || 0;
+              const ds1 = Number(chartInstance.data.datasets[1].data[c.dataIndex]) || 0;
+              const tot = ds0 + ds1;
+              const pct = tot > 0 ? ((c.parsed.y / tot) * 100).toFixed(1) + '%' : '0%';
+              return ` ${c.dataset.label}: ${fmtINR(c.parsed.y)} (${pct})`;
+            },
+            footer(items) {
+              if (!items || !items.length) return '';
+              const chartInstance = items[0].chart;
+              const idx = items[0].dataIndex;
+              const ds0 = Number(chartInstance.data.datasets[0].data[idx]) || 0;
+              const ds1 = Number(chartInstance.data.datasets[1].data[idx]) || 0;
+              const tot = ds0 + ds1;
+              return ` Total Sales Value: ${fmtINR(tot)}`;
+            }
+          }
+        },
+        stackedBarLabels: { display: true }
       },
       scales: {
-        x: { grid: { display: false } },
-        y: { position: 'left', grid: { color: PALETTE.grid }, ticks: { callback: v => fmtCompactINR(v) } },
-        y1: { position: 'right', grid: { display: false }, beginAtZero: true }
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { position: 'left', stacked: true, grid: { color: PALETTE.grid }, ticks: { callback: v => fmtCompactINR(v), font: { size: 10 } }, beginAtZero: true },
+        y1: { position: 'right', grid: { display: false }, beginAtZero: true, ticks: { font: { size: 10 } } }
       }
     }
   });
@@ -846,14 +877,24 @@ function renderAll() {
   /* ---- Trend ---- */
   const trendMap = new Map();
   sales.forEach(r => {
-    if (!trendMap.has(r.saleDate)) trendMap.set(r.saleDate, { value: 0, units: 0 });
+    if (!trendMap.has(r.saleDate)) {
+      trendMap.set(r.saleDate, { tvVal: 0, acVal: 0, units: 0 });
+    }
     const t = trendMap.get(r.saleDate);
-    t.value += r.value; t.units += r.qty;
+    if (r.category === 'TV') {
+      t.tvVal += r.value;
+    } else if (r.category === 'AC') {
+      t.acVal += r.value;
+    } else {
+      t.tvVal += r.value;
+    }
+    t.units += r.qty;
   });
   const trendDates = Array.from(trendMap.keys()).sort();
   charts.trend.data.labels = trendDates.map(d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
-  charts.trend.data.datasets[0].data = trendDates.map(d => trendMap.get(d).value);
-  charts.trend.data.datasets[1].data = trendDates.map(d => trendMap.get(d).units);
+  charts.trend.data.datasets[0].data = trendDates.map(d => trendMap.get(d).tvVal);
+  charts.trend.data.datasets[1].data = trendDates.map(d => trendMap.get(d).acVal);
+  charts.trend.data.datasets[2].data = trendDates.map(d => trendMap.get(d).units);
   charts.trend.update();
 
   /* ---- Zone / State ---- */
