@@ -195,48 +195,79 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     </div>
   </div>
 
-  <!-- CATEGORY / CHANNEL -->
+  <!-- PRODUCT / CHANNEL MIX -->
   <div class="section">
     <div class="section-head">
       <div class="eyebrow">Product &amp; Channel</div>
-      <h2 class="section-title">Category &amp; Store Channel Mix</h2>
+      <h2 class="section-title">Product &amp; Store Channel Mix</h2>
     </div>
     <div class="grid-4">
-      <div class="card"><div class="card-title">Category Value (TV vs AC)</div><div class="chart-box short"><canvas id="chartCatValue"></canvas></div></div>
-      <div class="card"><div class="card-title">Category Units (TV vs AC)</div><div class="chart-box short"><canvas id="chartCatUnits"></canvas></div></div>
-      <div class="card"><div class="card-title">Channel Type &ndash; Value</div><div class="chart-box short"><canvas id="chartChValue"></canvas></div></div>
-      <div class="card"><div class="card-title">Channel Type &ndash; Units</div><div class="chart-box short"><canvas id="chartChUnits"></canvas></div></div>
+      <div class="card"><div class="card-title">Product (TV vs AC)<span class="tag">by value</span></div><div class="chart-box short"><canvas id="chartProductValue"></canvas></div></div>
+      <div class="card"><div class="card-title">Product Category &ndash; TV<span class="tag">by value</span></div><div class="chart-box short"><canvas id="chartTvCatValue"></canvas></div></div>
+      <div class="card"><div class="card-title">Product Category &ndash; AC<span class="tag amber">by value</span></div><div class="chart-box short"><canvas id="chartAcCatValue"></canvas></div></div>
+      <div class="card"><div class="card-title">Store Channel Type<span class="tag">by value</span></div><div class="chart-box short"><canvas id="chartChannelValue"></canvas></div></div>
     </div>
   </div>
 
   <!-- SKU -->
   <div class="section">
     <div class="section-head">
-      <div class="eyebrow">Product</div>
+      <div class="eyebrow">Product &middot; SKU Breakdown</div>
       <h2 class="section-title">SKU Performance</h2>
-      <div class="section-note"></div>
+      <div class="section-note">Top 5 SKUs with value &amp; volume contribution, and bottom 5 SKUs by units.</div>
     </div>
-    <div class="grid-3">
-      <div class="card"><div class="card-title">Top 5 TV SKUs<span class="tag">by units</span></div><div id="lbTopTV"></div></div>
-      <div class="card"><div class="card-title">Top 5 AC SKUs<span class="tag amber">by units</span></div><div id="lbTopAC"></div></div>
-      <div class="card"><div class="card-title">Bottom 5 SKUs<span class="tag coral">overall &middot; by units</span></div><div id="lbBottomSKU"></div></div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">Top 5 TV SKUs<span class="tag">Value &amp; Volume Contribution</span></div><div id="lbTopTV"></div></div>
+      <div class="card"><div class="card-title">Top 5 AC SKUs<span class="tag amber">Value &amp; Volume Contribution</span></div><div id="lbTopAC"></div></div>
+    </div>
+    <div class="grid-2" style="margin-top:16px;">
+      <div class="card"><div class="card-title">Bottom 5 TV SKUs<span class="tag coral">by units</span></div><div id="lbBottomTV"></div></div>
+      <div class="card"><div class="card-title">Bottom 5 AC SKUs<span class="tag coral">by units</span></div><div id="lbBottomAC"></div></div>
     </div>
   </div>
 
-  <!-- PROMOTERS -->
+  <!-- PROMOTERS BY REGION -->
   <div class="section">
     <div class="section-head">
-      <div class="eyebrow">People &middot; Individual</div>
-      <h2 class="section-title">Promoter Leaderboards</h2>
-      <div class="section-note">Use the Zone / State filters above to drill into a specific region.</div>
+      <div class="eyebrow">People &middot; Regional Performers</div>
+      <h2 class="section-title">Promoter Leaderboards by Region</h2>
+      <div class="section-note">Top 5 and Bottom 5 promoters by sales value for each zone (Promoter role only).</div>
     </div>
-    <div class="grid-2">
-      <div class="card"><div class="card-title">Top 5 Promoters<span class="tag">by sale value</span></div><div id="lbTopValue"></div></div>
-      <div class="card"><div class="card-title">Bottom 5 Promoters<span class="tag coral">by sale value</span></div><div id="lbBottomValue"></div></div>
+
+    <!-- North Zone -->
+    <div class="zone-lb-section">
+      <div class="zone-header"><span class="zone-title-badge">North Zone</span></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Top 5 Promoters &ndash; North<span class="tag">by sale value</span></div><div id="lbTopNorth"></div></div>
+        <div class="card"><div class="card-title">Bottom 5 Promoters &ndash; North<span class="tag coral">by sale value</span></div><div id="lbBottomNorth"></div></div>
+      </div>
     </div>
-    <div class="grid-2" style="margin-top:16px;">
-      <div class="card"><div class="card-title">Top 5 Promoters<span class="tag">by distinct SKUs sold</span></div><div id="lbTopSku"></div></div>
-      <div class="card"><div class="card-title">Bottom 5 Promoters<span class="tag coral">by distinct SKUs sold</span></div><div id="lbBottomSku"></div></div>
+
+    <!-- South Zone -->
+    <div class="zone-lb-section" style="margin-top:20px;">
+      <div class="zone-header"><span class="zone-title-badge">South Zone</span></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Top 5 Promoters &ndash; South<span class="tag">by sale value</span></div><div id="lbTopSouth"></div></div>
+        <div class="card"><div class="card-title">Bottom 5 Promoters &ndash; South<span class="tag coral">by sale value</span></div><div id="lbBottomSouth"></div></div>
+      </div>
+    </div>
+
+    <!-- East Zone -->
+    <div class="zone-lb-section" style="margin-top:20px;">
+      <div class="zone-header"><span class="zone-title-badge">East Zone</span></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Top 5 Promoters &ndash; East<span class="tag">by sale value</span></div><div id="lbTopEast"></div></div>
+        <div class="card"><div class="card-title">Bottom 5 Promoters &ndash; East<span class="tag coral">by sale value</span></div><div id="lbBottomEast"></div></div>
+      </div>
+    </div>
+
+    <!-- West Zone -->
+    <div class="zone-lb-section" style="margin-top:20px;">
+      <div class="zone-header"><span class="zone-title-badge">West Zone</span></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Top 5 Promoters &ndash; West<span class="tag">by sale value</span></div><div id="lbTopWest"></div></div>
+        <div class="card"><div class="card-title">Bottom 5 Promoters &ndash; West<span class="tag coral">by sale value</span></div><div id="lbBottomWest"></div></div>
+      </div>
     </div>
   </div>
 
@@ -245,7 +276,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     <div class="section-head">
       <div class="eyebrow">Attention</div>
       <h2 class="section-title">Promoters with Zero Sales</h2>
-      <div class="section-note">Active in the current filter scope but logged no sale value.</div>
+      <div class="section-note">Active in the current filter scope but logged no sale value (Promoter role only).</div>
     </div>
     <div class="card" style="padding:0;">
       <div class="table-wrap" style="max-height:340px;overflow-y:auto;">
@@ -548,10 +579,10 @@ function initCharts() {
   makeBarChart('chartStateCount', PALETTE.light, { rotate: 40, tooltipCallbacks: { label: c => fmtNum(c.parsed.y) + ' txns' } });
   makeBarChart('chartTL', PALETTE.mid, { rotate: 35, tooltipCallbacks: { label: c => fmtINR(c.parsed.y) } });
   makeBarChart('chartRSM', PALETTE.mid, { tooltipCallbacks: { label: c => fmtINR(c.parsed.y) } });
-  makePieChart('chartCatValue');
-  makePieChart('chartCatUnits');
-  makePieChart('chartChValue');
-  makePieChart('chartChUnits');
+  makePieChart('chartProductValue');
+  makePieChart('chartTvCatValue');
+  makePieChart('chartAcCatValue');
+  makePieChart('chartChannelValue');
 
   const trendEl = document.getElementById('chartTrend');
   charts.trend = new Chart(trendEl, {
@@ -599,21 +630,46 @@ function updatePieChart(id, entries) {
 }
 
 /* =========================================================================
+   ROLE DEFINITIONS & PROMOTER SCOPE
+   ========================================================================= */
+let tlCodesSet = new Set();
+let rsmCodesSet = new Set();
+let tlNamesSet = new Set();
+let rsmNamesSet = new Set();
+
+function refreshRoleSets() {
+  tlCodesSet = new Set(RECORDS.map(x => x.tlCode).filter(Boolean));
+  rsmCodesSet = new Set(RECORDS.map(x => x.rsmCode).filter(Boolean));
+  tlNamesSet = new Set(RECORDS.map(x => x.tl).filter(Boolean));
+  rsmNamesSet = new Set(RECORDS.map(x => x.rsm).filter(Boolean));
+}
+
+function isPromoterRecord(r) {
+  if (!r) return false;
+  if (r.role && !r.role.toLowerCase().includes('promoter')) return false;
+  if (r.userCode && (tlCodesSet.has(r.userCode) || rsmCodesSet.has(r.userCode))) return false;
+  if (r.promoter && (tlNamesSet.has(r.promoter) || rsmNamesSet.has(r.promoter))) return false;
+  return true;
+}
+
+/* =========================================================================
    LEADERBOARD / TABLE renderers
    ========================================================================= */
-function renderLeaderboard(containerId, items, opts) {
+function renderLeaderboard(containerId, items, opts = {}) {
   const el = document.getElementById(containerId);
-  if (!items.length) { el.innerHTML = '<div class="empty-note">No data in current filter selection.</div>'; return; }
+  if (!el) return;
+  if (!items || !items.length) { el.innerHTML = '<div class="empty-note">No data in current filter selection.</div>'; return; }
   const maxVal = Math.max(...items.map(i => i.value)) || 1;
+  const isBottom = !!opts.bottom;
   el.innerHTML = items.map((it, idx) => `
-    <div class="lb-row ${opts.bottom ? 'bottom' : ''}">
+    <div class="lb-row ${isBottom ? 'bottom' : ''}">
       <div class="lb-rank">${idx + 1}</div>
       <div class="lb-info">
         <div class="lb-name">${it.name}${it.tag ? `<span class="zone-chip">${it.tag}</span>` : ''}</div>
         <div class="lb-meta">${it.meta || ''}</div>
       </div>
       <div class="lb-bar-wrap"><div class="lb-bar-track"><div class="lb-bar-fill" style="width:${Math.max(6, (it.value / maxVal) * 100)}%"></div></div></div>
-      <div class="lb-value">${opts.fmt(it.value)}</div>
+      <div class="lb-value">${it.valueText || (opts.fmt ? opts.fmt(it.value) : it.value)}</div>
     </div>`).join('');
 }
 
@@ -697,58 +753,139 @@ function renderAll() {
   updateBarChart('chartTL', tlMap);
   updateBarChart('chartRSM', rsmMap);
 
-  /* ---- Category / Channel ---- */
-  const catValEntries = [['TV', tvValue], ['AC', acValue]];
-  const catUnitEntries = [['TV', tvRows.reduce((a, r) => a + r.qty, 0)], ['AC', acRows.reduce((a, r) => a + r.qty, 0)]];
-  updatePieChart('chartCatValue', catValEntries);
-  updatePieChart('chartCatUnits', catUnitEntries);
-
+  /* ---- Product & Channel Mix ---- */
+  const prodValEntries = [['TV', tvValue], ['AC', acValue]].filter(e => e[1] > 0);
+  const tvCatValMap = sortMapDesc(sumBy(tvRows, r => r.techCat, r => r.value));
+  const acCatValMap = sortMapDesc(sumBy(acRows, r => r.techCat, r => r.value));
   const chValMap = sortMapDesc(sumBy(sales, r => r.channelType, r => r.value));
-  const chUnitMap = sortMapDesc(sumBy(sales, r => r.channelType, r => r.qty));
-  updatePieChart('chartChValue', chValMap);
-  updatePieChart('chartChUnits', chUnitMap);
 
-  /* ---- SKU leaderboards ---- */
-  function topSkuFor(rows, n) {
-    const m = sortMapDesc(sumBy(rows, r => r.sku, r => r.qty));
-    return m.slice(0, n).map(([sku, qty]) => ({ name: sku, value: qty, meta: fmtNum(qty) + ' units sold' }));
-  }
-  function bottomSkuFor(rows, n) {
-    const m = sortMapAsc(sumBy(rows, r => r.sku, r => r.qty));
-    return m.slice(0, n).map(([sku, qty]) => ({ name: sku, value: qty, meta: fmtNum(qty) + ' units sold' }));
-  }
-  renderLeaderboard('lbTopTV', topSkuFor(tvRows, 5), { fmt: fmtNum });
-  renderLeaderboard('lbTopAC', topSkuFor(acRows, 5), { fmt: fmtNum });
-  renderLeaderboard('lbBottomSKU', bottomSkuFor(sales, 5), { fmt: fmtNum, bottom: true });
+  updatePieChart('chartProductValue', prodValEntries);
+  updatePieChart('chartTvCatValue', tvCatValMap);
+  updatePieChart('chartAcCatValue', acCatValMap);
+  updatePieChart('chartChannelValue', chValMap);
 
-  /* ---- Promoter leaderboards ---- */
-  const promMeta = new Map(); // userCode -> {name, store, zone, state, tl}
-  sales.forEach(r => { if (!promMeta.has(r.userCode)) promMeta.set(r.userCode, { name: r.promoter, store: r.store, zone: r.zone, state: r.state, tl: r.tl }); });
-  const promValue = sumBy(sales, r => r.userCode, r => r.value);
-  const promUnits = sumBy(sales, r => r.userCode, r => r.qty);
-  const promSkuCount = countDistinctBy(sales, r => r.userCode, r => r.sku);
+  /* ---- SKU Performance (Category-wise) ---- */
+  const totalTvUnits = tvRows.reduce((a, r) => a + r.qty, 0);
+  const totalAcUnits = acRows.reduce((a, r) => a + r.qty, 0);
 
-  function buildPromList(map, n, sortFn, valFmt) {
-    const arr = sortFn(map).slice(0, n);
-    return arr.map(([code, val]) => {
-      const meta = promMeta.get(code) || {};
-      return { name: meta.name || code, value: val, tag: meta.zone || '', meta: (meta.store || '\u2014') };
+  function getSkuStats(rows) {
+    const map = new Map();
+    rows.forEach(r => {
+      if (!r.sku) return;
+      if (!map.has(r.sku)) map.set(r.sku, { value: 0, qty: 0 });
+      const st = map.get(r.sku);
+      st.value += r.value;
+      st.qty += r.qty;
     });
+    return map;
   }
-  renderLeaderboard('lbTopValue', buildPromList(promValue, 5, sortMapDesc), { fmt: fmtCompactINR });
-  renderLeaderboard('lbBottomValue', buildPromList(promValue, 5, sortMapAsc), { fmt: fmtCompactINR, bottom: true });
-  renderLeaderboard('lbTopSku', buildPromList(promSkuCount, 5, sortMapDesc), { fmt: v => fmtNum(v) + ' SKUs' });
-  renderLeaderboard('lbBottomSku', buildPromList(promSkuCount, 5, sortMapAsc), { fmt: v => fmtNum(v) + ' SKUs', bottom: true });
 
-  /* ---- Zero-sale promoters ---- */
-  const inScopeCodes = new Map(); // userCode -> meta, from ALL filtered rows (any sale or not)
-  filtered.forEach(r => { if (r.userCode && !inScopeCodes.has(r.userCode)) inScopeCodes.set(r.userCode, { name: r.promoter, store: r.store, tl: r.tl, zone: r.zone, state: r.state }); });
+  const tvSkuStats = getSkuStats(tvRows);
+  const acSkuStats = getSkuStats(acRows);
+
+  // Top 5 TV SKUs (ranked by sales value)
+  const topTvList = Array.from(tvSkuStats.entries())
+    .sort((a, b) => b[1].value - a[1].value)
+    .slice(0, 5)
+    .map(([sku, st]) => {
+      const vPct = tvValue > 0 ? ((st.value / tvValue) * 100).toFixed(1) : '0.0';
+      const uPct = totalTvUnits > 0 ? ((st.qty / totalTvUnits) * 100).toFixed(1) : '0.0';
+      return {
+        name: sku,
+        value: st.value,
+        valueText: fmtCompactINR(st.value),
+        meta: `<span style="color:var(--teal-700);font-weight:700;">${fmtINR(st.value)}</span> (${vPct}% val) &middot; <span style="color:var(--ink);font-weight:700;">${fmtNum(st.qty)} units</span> (${uPct}% units)`
+      };
+    });
+
+  // Top 5 AC SKUs (ranked by sales value)
+  const topAcList = Array.from(acSkuStats.entries())
+    .sort((a, b) => b[1].value - a[1].value)
+    .slice(0, 5)
+    .map(([sku, st]) => {
+      const vPct = acValue > 0 ? ((st.value / acValue) * 100).toFixed(1) : '0.0';
+      const uPct = totalAcUnits > 0 ? ((st.qty / totalAcUnits) * 100).toFixed(1) : '0.0';
+      return {
+        name: sku,
+        value: st.value,
+        valueText: fmtCompactINR(st.value),
+        meta: `<span style="color:var(--amber-600);font-weight:700;">${fmtINR(st.value)}</span> (${vPct}% val) &middot; <span style="color:var(--ink);font-weight:700;">${fmtNum(st.qty)} units</span> (${uPct}% units)`
+      };
+    });
+
+  // Bottom 5 TV SKUs (by units)
+  const bottomTvList = Array.from(tvSkuStats.entries())
+    .filter(([_, st]) => st.qty > 0)
+    .sort((a, b) => a[1].qty - b[1].qty || a[1].value - b[1].value)
+    .slice(0, 5)
+    .map(([sku, st]) => ({
+      name: sku,
+      value: st.qty,
+      valueText: fmtNum(st.qty) + ' units',
+      meta: fmtINR(st.value) + ' sales value'
+    }));
+
+  // Bottom 5 AC SKUs (by units)
+  const bottomAcList = Array.from(acSkuStats.entries())
+    .filter(([_, st]) => st.qty > 0)
+    .sort((a, b) => a[1].qty - b[1].qty || a[1].value - b[1].value)
+    .slice(0, 5)
+    .map(([sku, st]) => ({
+      name: sku,
+      value: st.qty,
+      valueText: fmtNum(st.qty) + ' units',
+      meta: fmtINR(st.value) + ' sales value'
+    }));
+
+  renderLeaderboard('lbTopTV', topTvList, { fmt: fmtCompactINR });
+  renderLeaderboard('lbTopAC', topAcList, { fmt: fmtCompactINR });
+  renderLeaderboard('lbBottomTV', bottomTvList, { fmt: v => fmtNum(v) + ' units', bottom: true });
+  renderLeaderboard('lbBottomAC', bottomAcList, { fmt: v => fmtNum(v) + ' units', bottom: true });
+
+  /* ---- Regional Promoter Leaderboards (Promoter role only) ---- */
+  const promoterSales = sales.filter(isPromoterRecord);
+  const promValue = sumBy(promoterSales, r => r.userCode, r => r.value);
+
+  const ZONES = ['North', 'South', 'East', 'West'];
+  ZONES.forEach(z => {
+    const zoneSales = promoterSales.filter(r => r.zone === z);
+    const zonePromMeta = new Map();
+    zoneSales.forEach(r => {
+      if (r.userCode && !zonePromMeta.has(r.userCode)) {
+        zonePromMeta.set(r.userCode, { name: r.promoter, store: r.store, state: r.state, tl: r.tl });
+      }
+    });
+    const zoneVal = sumBy(zoneSales, r => r.userCode, r => r.value);
+    
+    const topZone = sortMapDesc(zoneVal).slice(0, 5).map(([code, val]) => {
+      const meta = zonePromMeta.get(code) || {};
+      return { name: meta.name || code, value: val, tag: meta.state || '', meta: (meta.store || '\u2014') };
+    });
+
+    const bottomZone = sortMapAsc(zoneVal).slice(0, 5).map(([code, val]) => {
+      const meta = zonePromMeta.get(code) || {};
+      return { name: meta.name || code, value: val, tag: meta.state || '', meta: (meta.store || '\u2014') };
+    });
+
+    renderLeaderboard('lbTop' + z, topZone, { fmt: fmtCompactINR });
+    renderLeaderboard('lbBottom' + z, bottomZone, { fmt: fmtCompactINR, bottom: true });
+  });
+
+  /* ---- Zero-sale promoters (Promoter role only) ---- */
+  const inScopePromoters = new Map();
+  filtered.forEach(r => {
+    if (r.userCode && isPromoterRecord(r) && !inScopePromoters.has(r.userCode)) {
+      inScopePromoters.set(r.userCode, { name: r.promoter, store: r.store, tl: r.tl, zone: r.zone, state: r.state });
+    }
+  });
+
   const zeroList = [];
-  inScopeCodes.forEach((meta, code) => {
+  inScopePromoters.forEach((meta, code) => {
     const v = promValue.get(code) || 0;
     if (v === 0) zeroList.push({ code, ...meta });
   });
-  zeroList.sort((a, b) => a.name.localeCompare(b.name));
+  zeroList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
   const tbody = document.getElementById('zeroTableBody');
   if (!zeroList.length) {
     tbody.innerHTML = '<tr><td colspan="6" class="empty-note">No zero-sale promoters in the current filter selection.</td></tr>';
@@ -903,7 +1040,7 @@ const COLMAP = {
   'RSM Code': 'rsmCode', 'RSM Name': 'rsm', 'Zone': 'zone', 'State': 'state', 'Product price': 'price',
   'Product': 'category', 'Product Category': 'techCat', 'Product Sub Category': 'subCat',
   'Sales Value': 'value', 'Store Channel Type': 'channelType', 'Store Channel Name': 'channelName',
-  'Partner Code': 'partnerCode', 'Promoter CTC': 'ctc', 'Promoter Salary': 'ctc',
+  'Partner Code': 'partnerCode', 'Promoter CTC': 'ctc', 'Promoter Salary': 'ctc', 'User Role': 'role', 'Role': 'role',
 };
 /* Robustly parse a date cell: handles raw Excel serial numbers (numeric or string),
    JS Date objects, DD-MMM-YY, DD-MM-YYYY, or YYYY-MM-DD strings deterministically. */
@@ -1013,6 +1150,7 @@ async function fetchLiveData(force = false) {
     });
     if (newRecords.length > 0) {
       RECORDS = newRecords;
+      refreshRoleSets();
       initFilterDefaults();
       buildFilterUI();
       renderAll();
@@ -1038,6 +1176,7 @@ document.getElementById('uploadBtn').addEventListener('click', () => fetchLiveDa
 /* =========================================================================
    INIT & AUTO REFRESH HANDLERS
    ========================================================================= */
+refreshRoleSets();
 initFilterDefaults();
 buildFilterUI();
 initCharts();
