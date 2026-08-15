@@ -286,6 +286,19 @@ header.topbar{
   width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.18);
   display:flex;align-items:center;justify-content:center;margin-bottom:8px;
   font-size:13px;
+  position:relative;
+  z-index:3;
+  color:#fff;
+  flex-shrink:0;
+}
+.kpi .kpi-icon svg{
+  display:block;
+  width:15px;
+  height:15px;
+}
+.kpi > div{
+  position:relative;
+  z-index:3;
 }
 .kpi .kpi-label{font-size:11px;font-weight:700;letter-spacing:.3px;opacity:.92;position:relative;z-index:2;}
 .kpi .kpi-value{font-family:'Manrope';font-size:clamp(15px,2.1vw,23px);font-weight:800;margin-top:2px;position:relative;z-index:2;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
