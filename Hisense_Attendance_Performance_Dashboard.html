@@ -345,8 +345,8 @@ footer .brand-line img{height:14px;opacity:.6;}
 .browser-tabbar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 16px 0 14px;
+  gap: 6px;
+  padding: 8px 16px 0 16px;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -354,22 +354,6 @@ footer .brand-line img{height:14px;opacity:.6;}
 .browser-tabbar::-webkit-scrollbar {
   display: none;
 }
-.browser-window-controls {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 10px 6px 2px;
-  flex-shrink: 0;
-}
-.win-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.win-red { background: #ff5f56; border: 1px solid #e0443e; box-shadow: 0 0 3px rgba(255,95,86,0.3); }
-.win-yellow { background: #ffbd2e; border: 1px solid #dea123; box-shadow: 0 0 3px rgba(255,189,46,0.3); }
-.win-green { background: #27c93f; border: 1px solid #1aab29; box-shadow: 0 0 3px rgba(39,201,63,0.3); }
 
 .browser-tabs-track {
   display: flex;
@@ -441,8 +425,7 @@ footer .brand-line img{height:14px;opacity:.6;}
 }
 
 @media (max-width:760px){
-  .browser-tabbar { padding: 6px 8px 0 8px; gap: 6px; }
-  .browser-window-controls { display: none; }
+  .browser-tabbar { padding: 6px 8px 0 8px; }
   .nav-browser-tab { padding: 6px 12px 7px 10px; font-size: 11px; }
   .wrap{padding:0 14px 48px;}
   .topbar-inner{flex-wrap:wrap;padding:14px 16px;gap:10px;}
@@ -468,11 +451,6 @@ footer .brand-line img{height:14px;opacity:.6;}
 <!-- BROWSER TAB NAVIGATION MENU -->
 <nav class="browser-tab-nav" aria-label="Dashboard navigation tabs">
   <div class="browser-tabbar">
-    <div class="browser-window-controls" aria-hidden="true">
-      <span class="win-dot win-red"></span>
-      <span class="win-dot win-yellow"></span>
-      <span class="win-dot win-green"></span>
-    </div>
     <div class="browser-tabs-track">
       <a href="index.html" class="nav-browser-tab" title="Hisense Sales Dashboard">
         <span class="nav-tab-icon">
