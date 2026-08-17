@@ -239,13 +239,22 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   <!-- PROMOTERS BY REGION -->
   <div class="section">
     <div class="section-head">
-      <div class="eyebrow">People &middot; Regional Performers</div>
-      <h2 class="section-title">Promoter Leaderboards by Region</h2>
-      <div class="section-note">Top 5 and Bottom 5 promoters by sales value for each zone (Promoter role only).</div>
+      <div class="eyebrow">People &middot; Performers Leaderboard</div>
+      <h2 class="section-title">Promoter Leaderboards (PAN India &amp; by Region)</h2>
+      <div class="section-note">Top 5 and Bottom 5 promoters by sales value nationally and for each zone (Promoter role only).</div>
+    </div>
+
+    <!-- PAN India / National -->
+    <div class="zone-lb-section">
+      <div class="zone-header"><span class="zone-title-badge">PAN India &middot; National</span></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Top 5 Promoters &ndash; PAN India<span class="tag">by sale value</span></div><div id="lbTopNational"></div></div>
+        <div class="card"><div class="card-title">Bottom 5 Promoters &ndash; PAN India<span class="tag coral">by sale value</span></div><div id="lbBottomNational"></div></div>
+      </div>
     </div>
 
     <!-- North Zone -->
-    <div class="zone-lb-section">
+    <div class="zone-lb-section" style="margin-top:20px;">
       <div class="zone-header"><span class="zone-title-badge">North Zone</span></div>
       <div class="grid-2">
         <div class="card"><div class="card-title">Top 5 Promoters &ndash; North<span class="tag">by sale value</span></div><div id="lbTopNorth"></div></div>
@@ -1169,8 +1178,29 @@ function renderAll() {
   renderLeaderboard('lbBottomTV', bottomTvList, { fmt: v => fmtNum(v) + ' units', bottom: true });
   renderLeaderboard('lbBottomAC', bottomAcList, { fmt: v => fmtNum(v) + ' units', bottom: true });
 
-  /* ---- Regional Promoter Leaderboards (Promoter role only) ---- */
+  /* ---- Promoter Leaderboards (PAN India & Regional - Promoter role only) ---- */
   const promValue = sumBy(promoterSales, r => r.userCode, r => r.value);
+
+  // PAN India / National
+  const allPromMeta = new Map();
+  promoterSales.forEach(r => {
+    if (r.userCode && !allPromMeta.has(r.userCode)) {
+      allPromMeta.set(r.userCode, { name: r.promoter, store: r.store, state: r.state, tl: r.tl, zone: r.zone });
+    }
+  });
+
+  const topNational = sortMapDesc(promValue).slice(0, 5).map(([code, val]) => {
+    const meta = allPromMeta.get(code) || {};
+    return { name: meta.name || code, value: val, tag: meta.state || meta.zone || '', meta: (meta.store || '—') };
+  });
+
+  const bottomNational = sortMapAsc(promValue).slice(0, 5).map(([code, val]) => {
+    const meta = allPromMeta.get(code) || {};
+    return { name: meta.name || code, value: val, tag: meta.state || meta.zone || '', meta: (meta.store || '—') };
+  });
+
+  renderLeaderboard('lbTopNational', topNational, { fmt: fmtCompactINR });
+  renderLeaderboard('lbBottomNational', bottomNational, { fmt: fmtCompactINR, bottom: true });
 
   const ZONES = ['North', 'South', 'East', 'West'];
   ZONES.forEach(z => {
