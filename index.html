@@ -471,7 +471,7 @@ function computeRoiAggregate(filteredRows, salesRows) {
   filteredRows.forEach(r => {
     if (r.userCode && r.ctc && !ctcByPromoter.has(r.userCode)) ctcByPromoter.set(r.userCode, r.ctc);
   });
-  const totalCtc = Array.from(ctcByPromoter.values()).reduce((a, b) => a + b, 0);
+  const totalCtc = Array.from(ctcByPromoter.values()).reduce((a, b) => a + b, 0) * 1.20 * 1.035;
   const totalSales = salesRows.reduce((a, r) => a + r.value, 0);
   const roi = totalCtc > 0 ? totalSales / totalCtc : 0;
   return { roi, totalCtc, promoterCount: ctcByPromoter.size };
