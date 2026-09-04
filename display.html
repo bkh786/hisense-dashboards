@@ -416,15 +416,19 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     <div class="card" style="margin-top: 16px;">
       <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span>Filtered Stores Directory</span>
+          <span id="tableTitleText">Store Directory</span>
           <span class="tag" id="tableRecordCountBadge">0 stores</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <div class="table-search-box">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="text" id="tableSearchInput" placeholder="Search store, code, user...">
           </div>
-          <button type="button" class="export-btn" id="exportTableBtn" title="Export current filtered stores as CSV">
+          <button type="button" class="export-btn" id="toggleTableSyncBtn" title="Toggle between all stores and stores matching top filters">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <span id="syncBtnText">Apply Top Filters</span>
+          </button>
+          <button type="button" class="export-btn" id="exportTableBtn" title="Export current stores list as CSV">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>Export CSV</span>
           </button>
@@ -851,11 +855,12 @@ const customDataLabelsPlugin = {
         const center = element.getCenterPoint();
 
         ctx.save();
-        ctx.font = '700 11px Inter, sans-serif';
+        ctx.font = '800 12px Inter, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
-        ctx.shadowBlur = 4;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.strokeText(pctText, center.x, center.y);
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText(pctText, center.x, center.y);
         ctx.restore();
@@ -877,11 +882,14 @@ const customDataLabelsPlugin = {
           const { x: elX, y: elY } = element;
 
           ctx.save();
-          ctx.font = '700 10.5px Inter, sans-serif';
+          ctx.font = '800 12px Inter, sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.strokeText(text, elX, elY - 5);
           ctx.fillStyle = '#12241F';
-          ctx.fillText(text, elX, elY - 4);
+          ctx.fillText(text, elX, elY - 5);
           ctx.restore();
         });
       } else if (isStacked) {
@@ -890,10 +898,19 @@ const customDataLabelsPlugin = {
 
         for (let i = 0; i < numBars; i++) {
           let barTotal = 0;
+          let highestY = Infinity;
+          let barX = 0;
+
           for (let d = 0; d < datasetCount; d++) {
             const meta = chart.getDatasetMeta(d);
             if (!meta.hidden) {
-              barTotal += Number(chart.data.datasets[d].data[i]) || 0;
+              const val = Number(chart.data.datasets[d].data[i]) || 0;
+              barTotal += val;
+              const el = meta.data[i];
+              if (el && val > 0) {
+                barX = el.x;
+                if (el.y < highestY) highestY = el.y;
+              }
             }
           }
           if (!barTotal) continue;
@@ -908,24 +925,46 @@ const customDataLabelsPlugin = {
 
             const segHeight = Math.abs(element.base - element.y);
             const pct = Math.round((val / barTotal) * 100);
+            const midY = (element.base + element.y) / 2;
+            const barW = element.width || 20;
 
-            if (segHeight >= 14) {
+            let labelText = '';
+            if (segHeight >= 22 && barW >= 28) {
+              labelText = `${fmtNum(val)} (${pct}%)`;
+            } else if (segHeight >= 12 && barW >= 22) {
+              labelText = barW >= 26 ? `${pct}%` : `${fmtNum(val)}`;
+            } else if (segHeight >= 9 && barW >= 16) {
+              labelText = `${pct}%`;
+            }
+
+            if (labelText) {
               ctx.save();
-              ctx.font = segHeight >= 22 ? '700 10.5px Inter, sans-serif' : '600 9.5px Inter, sans-serif';
+              ctx.font = (segHeight >= 20 && barW >= 28)
+                ? '800 11.5px Inter, sans-serif'
+                : '700 10.5px Inter, sans-serif';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
+              ctx.lineWidth = 3;
+              ctx.strokeStyle = 'rgba(15, 30, 26, 0.85)';
+              ctx.strokeText(labelText, element.x, midY);
               ctx.fillStyle = '#FFFFFF';
-              ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-              ctx.shadowBlur = 3;
-
-              let labelText = `${pct}%`;
-              if (segHeight >= 30 && element.width >= 34) {
-                labelText = `${fmtNum(val)} (${pct}%)`;
-              }
-
-              ctx.fillText(labelText, element.x, (element.base + element.y) / 2);
+              ctx.fillText(labelText, element.x, midY);
               ctx.restore();
             }
+          }
+
+          // Render total bar count on top of each stacked column
+          if (highestY !== Infinity && barTotal > 0) {
+            ctx.save();
+            ctx.font = '800 11.5px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.strokeText(fmtNum(barTotal), barX, highestY - 4);
+            ctx.fillStyle = '#12241F';
+            ctx.fillText(fmtNum(barTotal), barX, highestY - 4);
+            ctx.restore();
           }
         }
       }
@@ -962,10 +1001,13 @@ function baseBarOptions(opts = {}) {
         ticks: { maxRotation: opts.rotate || 0, autoSkip: false, font: { size: 10.5, weight: '600' } }
       },
       y: {
-        grid: { color: PALETTE.grid },
-        ticks: { font: { size: 10 } },
+        display: false,
+        grid: { display: false },
+        ticks: { display: false },
+        border: { display: false },
         beginAtZero: true,
-        stacked: !!opts.stacked
+        stacked: !!opts.stacked,
+        grace: '14%'
       }
     }
   };
@@ -1087,7 +1129,7 @@ function initCharts() {
     tooltipCallbacks: { label: c => ` TV Share: ${fmtPct(c.parsed.y)}` },
     scales: {
       x: { grid: { display: false }, ticks: { font: { weight: '600' } } },
-      y: { grid: { color: PALETTE.grid }, beginAtZero: true, ticks: { callback: v => v + '%' } }
+      y: { display: false, beginAtZero: true, grace: '14%' }
     }
   });
   makeBarChart('chartChTypeShareAC', {
@@ -1096,7 +1138,7 @@ function initCharts() {
     tooltipCallbacks: { label: c => ` AC Share: ${fmtPct(c.parsed.y)}` },
     scales: {
       x: { grid: { display: false }, ticks: { font: { weight: '600' } } },
-      y: { grid: { color: PALETTE.grid }, beginAtZero: true, ticks: { callback: v => v + '%' } }
+      y: { display: false, beginAtZero: true, grace: '14%' }
     }
   });
 
@@ -1288,8 +1330,13 @@ function renderAll() {
     });
   updateStackedChart('chartStateCaptureStack', stateCats, stCaptured, stNotCaptured);
 
-  // Table rendering
-  renderStoresTable(filtered);
+  // Table rendering: exempt from top filters by default (shows all records)
+  const tableData = tableState.syncWithTopFilters ? filtered : RECORDS;
+  const titleText = document.getElementById('tableTitleText');
+  if (titleText) {
+    titleText.textContent = tableState.syncWithTopFilters ? 'Filtered Stores Directory' : 'Store Directory (All Stores)';
+  }
+  renderStoresTable(tableData);
 }
 
 
@@ -1303,6 +1350,7 @@ let tableState = {
   statusFilter: 'ALL',
   sortCol: 'storeName',
   sortAsc: true,
+  syncWithTopFilters: false,
 };
 
 let currentFilteredStores = [];
@@ -1528,6 +1576,21 @@ function initTableEvents() {
     });
   });
 
+  const syncBtn = document.getElementById('toggleTableSyncBtn');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', () => {
+      tableState.syncWithTopFilters = !tableState.syncWithTopFilters;
+      tableState.page = 1;
+      const btnText = document.getElementById('syncBtnText');
+      const titleText = document.getElementById('tableTitleText');
+      if (btnText) btnText.textContent = tableState.syncWithTopFilters ? 'Show All Stores' : 'Apply Top Filters';
+      if (titleText) titleText.textContent = tableState.syncWithTopFilters ? 'Filtered Stores Directory' : 'Store Directory (All Stores)';
+      syncBtn.classList.toggle('active', tableState.syncWithTopFilters);
+      const data = tableState.syncWithTopFilters ? getFiltered() : RECORDS;
+      renderStoresTable(data);
+    });
+  }
+
   const exportBtn = document.getElementById('exportTableBtn');
   if (exportBtn) {
     exportBtn.addEventListener('click', () => {
@@ -1643,7 +1706,16 @@ function loadWorkbookRows(arrayBuffer) {
 function applyNewRecords(records, sourceLabel) {
   if (!records.length) throw new Error('No usable rows found.');
   RECORDS = records;
-  initFilterDefaults();
+  // Retain active filter selections that remain valid in the updated dataset
+  FILTER_DIMS.forEach(d => {
+    if (!state.filters[d.key]) state.filters[d.key] = new Set();
+    const validOpts = new Set(uniqueOptions(d.key));
+    const retained = new Set();
+    state.filters[d.key].forEach(v => {
+      if (validOpts.has(v)) retained.add(v);
+    });
+    state.filters[d.key] = retained;
+  });
   buildFilterUI();
   renderAll();
 }
