@@ -615,6 +615,28 @@ function buildWeekLabels(rawRecords) {
   });
 }
 
+function parseExcelDate(dVal) {
+  if (!dVal || dVal === '0' || dVal === 0 || dVal === '-') return '';
+  if (dVal instanceof Date && !isNaN(dVal.getTime())) {
+    const midday = new Date(dVal.getTime() + 12 * 3600 * 1000);
+    return midday.toISOString().slice(0, 10);
+  }
+  if (typeof dVal === 'number' && dVal > 30000) {
+    const dt = new Date(Math.round((dVal - 25569) * 86400 * 1000));
+    return !isNaN(dt.getTime()) ? dt.toISOString().slice(0, 10) : '';
+  }
+  if (typeof dVal === 'string') {
+    dVal = dVal.trim();
+    if (dVal === '0' || dVal === '-') return '';
+    if (/^\d{5}(\.\d+)?$/.test(dVal)) {
+      const dt = new Date(Math.round((parseFloat(dVal) - 25569) * 86400 * 1000));
+      return !isNaN(dt.getTime()) ? dt.toISOString().slice(0, 10) : '';
+    }
+    return dVal.slice(0, 10);
+  }
+  return '';
+}
+
 function rowsToRecords(rows) {
   if (!rows.length) return [];
   const keys = Object.keys(rows[0]);
@@ -625,23 +647,7 @@ function rowsToRecords(rows) {
     const ac = H.acUnits ? (Number(r[H.acUnits]) || 0) : 0;
     const tot = H.totalUnits ? (Number(r[H.totalUnits]) || (tv + ac)) : (tv + ac);
     let dVal = H.date ? r[H.date] : '';
-    if (dVal instanceof Date && !isNaN(dVal.getTime())) {
-      dVal = dVal.toISOString().slice(0, 10);
-    } else if (typeof dVal === 'number' && dVal > 30000) {
-      const dt = new Date(Math.round((dVal - 25569) * 86400 * 1000));
-      dVal = !isNaN(dt.getTime()) ? dt.toISOString().slice(0, 10) : '';
-    } else if (typeof dVal === 'string') {
-      dVal = dVal.trim();
-      if (dVal === '0' || dVal === '-') dVal = '';
-      else if (/^\d{5}$/.test(dVal)) {
-        const dt = new Date(Math.round((Number(dVal) - 25569) * 86400 * 1000));
-        dVal = !isNaN(dt.getTime()) ? dt.toISOString().slice(0, 10) : '';
-      } else {
-        dVal = dVal.slice(0, 10);
-      }
-    } else {
-      dVal = '';
-    }
+    dVal = parseExcelDate(dVal);
 
     let stVal = H.status ? String(r[H.status] || '').trim() : '';
     if (!stVal) {
@@ -716,17 +722,57 @@ function uniqueOptions(key) {
   });
 }
 
-function recordMatchesDims(r) {
-  for (const d of FILTER_DIMS) {
-    const sel = state.filters[d.key];
-    if (sel.size === 0) continue;
-    if (!sel.has(r[d.key])) return false;
-  }
-  return true;
-}
-
 function getFiltered() {
-  return RECORDS.filter(recordMatchesDims);
+  const selDate = state.filters.capturedDateDisplay;
+  const selWeek = state.filters.capturedWeekLabel;
+
+  const hasDateFilter = selDate && selDate.size > 0;
+  const hasWeekFilter = selWeek && selWeek.size > 0;
+
+  const dateOnlyNotCaptured = hasDateFilter && selDate.size === 1 && selDate.has('Not Captured');
+  const specificDates = hasDateFilter ? Array.from(selDate).filter(d => d !== 'Not Captured') : [];
+  const hasSpecificDates = specificDates.length > 0;
+
+  const weekOnlyNotCaptured = hasWeekFilter && selWeek.size === 1 && selWeek.has('Not Captured');
+  const specificWeeks = hasWeekFilter ? Array.from(selWeek).filter(w => w !== 'Not Captured') : [];
+  const hasSpecificWeeks = specificWeeks.length > 0;
+
+  return RECORDS.map(r => {
+    // Check non-date, non-week dimension filters (Zone, State, Channel, Role, User Status, Captured By)
+    for (const d of FILTER_DIMS) {
+      if (d.key === 'capturedDateDisplay' || d.key === 'capturedWeekLabel') continue;
+      const sel = state.filters[d.key];
+      if (sel && sel.size > 0 && !sel.has(r[d.key])) return null;
+    }
+
+    // Determine temporal capture status for the selected date / week
+    let isCapturedForView = false;
+    if (hasSpecificDates) {
+      isCapturedForView = specificDates.includes(r.capturedDateDisplay);
+      if (!isCapturedForView && dateOnlyNotCaptured) return null;
+    } else if (dateOnlyNotCaptured) {
+      if (r.status === 'Captured') return null;
+      isCapturedForView = false;
+    } else if (hasSpecificWeeks) {
+      isCapturedForView = specificWeeks.includes(r.capturedWeekLabel);
+      if (!isCapturedForView && weekOnlyNotCaptured) return null;
+    } else if (weekOnlyNotCaptured) {
+      if (r.status === 'Captured') return null;
+      isCapturedForView = false;
+    } else {
+      isCapturedForView = (r.status === 'Captured');
+    }
+
+    const effectiveStatus = isCapturedForView ? 'Captured' : 'Not Captured';
+
+    return {
+      ...r,
+      status: effectiveStatus,
+      tvUnits: isCapturedForView ? r.tvUnits : 0,
+      acUnits: isCapturedForView ? r.acUnits : 0,
+      totalUnits: isCapturedForView ? r.totalUnits : 0,
+    };
+  }).filter(Boolean);
 }
 
 function sumBy(rows, keyFn, valFn) {
@@ -988,6 +1034,9 @@ function initCharts() {
     stacked: true,
     legend: true,
     customLabels: { mode: 'stacked' },
+    tooltipCallbacks: {
+      label: c => ` ${c.dataset.label}: ${fmtNum(c.parsed.y)} outlets`
+    },
     datasets: [
       { label: 'Captured', data: [], backgroundColor: '#1F5C56', borderRadius: 4, maxBarThickness: 42 },
       { label: 'Not Captured', data: [], backgroundColor: '#E05A47', borderRadius: 4, maxBarThickness: 42 },
@@ -1000,6 +1049,9 @@ function initCharts() {
     rotate: 45,
     thick: 20,
     customLabels: { mode: 'stacked' },
+    tooltipCallbacks: {
+      label: c => ` ${c.dataset.label}: ${fmtNum(c.parsed.y)} outlets`
+    },
     datasets: [
       { label: 'Captured', data: [], backgroundColor: '#1F5C56', borderRadius: 3, maxBarThickness: 24 },
       { label: 'Not Captured', data: [], backgroundColor: '#E05A47', borderRadius: 3, maxBarThickness: 24 },
@@ -1091,16 +1143,19 @@ function updateShareBar(id, entries) {
    ========================================================================= */
 function renderAll() {
   const filtered = getFiltered();
-  document.getElementById('rowCount').textContent = fmtNum(filtered.length);
-  document.getElementById('outletCount').textContent = fmtNum(new Set(filtered.map(r => r.outlet)).size);
+  const capturedCount = filtered.filter(r => r.status === 'Captured').length;
+  const notCapturedCount = filtered.filter(r => r.status !== 'Captured').length;
+  const uniqueOutlets = new Set(filtered.map(r => r.outlet)).size;
+
+  document.getElementById('rowCount').textContent = fmtNum(capturedCount);
+  document.getElementById('outletCount').textContent = fmtNum(uniqueOutlets);
 
   /* ---- 4 KPI Tiles ---- */
   const totalUnits = filtered.reduce((a, r) => a + r.totalUnits, 0);
   const tvUnits = filtered.reduce((a, r) => a + r.tvUnits, 0);
   const acUnits = filtered.reduce((a, r) => a + r.acUnits, 0);
-  const uniqueOutlets = new Set(filtered.map(r => r.outlet)).size;
 
-  const byOutlet = groupBy(filtered, r => r.outlet);
+  const byOutlet = groupBy(filtered.filter(r => r.status === 'Captured'), r => r.outlet);
   let onlyTV = 0, onlyAC = 0, bothCount = 0;
   byOutlet.forEach(rows => {
     const tv = rows.reduce((a, r) => a + r.tvUnits, 0);
@@ -1112,12 +1167,13 @@ function renderAll() {
 
   const tvPct = totalUnits ? ((tvUnits / totalUnits) * 100).toFixed(1) : '0.0';
   const acPct = totalUnits ? ((acUnits / totalUnits) * 100).toFixed(1) : '0.0';
+  const capRatePct = uniqueOutlets ? ((capturedCount / uniqueOutlets) * 100).toFixed(1) + '%' : '0.0%';
 
   const kpis = [
     {
       label: 'Total Display Reported',
       value: fmtNum(totalUnits),
-      sub: `Across ${fmtNum(uniqueOutlets)} reporting outlets`,
+      sub: `Across ${fmtNum(capturedCount)} reporting outlets (${capRatePct} capture rate)`,
       icon: SVG_ICONS.display,
       grad: ['#123B37', '#1F5C56']
     },
@@ -1138,7 +1194,7 @@ function renderAll() {
     {
       label: 'Unique Outlet Count',
       value: fmtNum(uniqueOutlets),
-      sub: `${fmtNum(onlyTV)} TV only &middot; ${fmtNum(onlyAC)} AC only &middot; ${fmtNum(bothCount)} Both`,
+      sub: `${fmtNum(capturedCount)} Captured &middot; ${fmtNum(notCapturedCount)} Not Captured`,
       icon: SVG_ICONS.store,
       grad: ['#1B5751', '#2F7C72']
     }
@@ -1578,10 +1634,10 @@ document.getElementById('resetBtn').addEventListener('click', () => {
    LIVE DATA CONNECTION
    ========================================================================= */
 function loadWorkbookRows(arrayBuffer) {
-  const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: true });
+  const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
   const sheetName = wb.SheetNames.includes('Store-wise Display') ? 'Store-wise Display' : wb.SheetNames[0];
   const ws = wb.Sheets[sheetName];
-  return XLSX.utils.sheet_to_json(ws, { defval: '' });
+  return XLSX.utils.sheet_to_json(ws, { defval: '', raw: true });
 }
 
 function applyNewRecords(records, sourceLabel) {
