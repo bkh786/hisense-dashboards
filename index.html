@@ -321,13 +321,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
    change (no pre-baked pivots, no row buffers).
    ========================================================================= */
 
-/* Promoter ROI = Total Sales Value \u00f7 Total Promoter CTC (each promoter's
+/* Expected Promoter ROI = Total Sales Value \u00f7 Total Promoter CTC (each promoter's
    Average CTC counted once, not once per row) — see computeRoiAggregate
    below. Displayed as a plain decimal ratio, not a percentage. */
 
 let RECORDS = [];
 
 const FILTER_DIMS = [
+  { key: 'salesMonth',   label: 'Month' },
   { key: 'zone',        label: 'Zone' },
   { key: 'saleType',     label: 'Sale Type' },
   { key: 'rsm',          label: 'RSM Name' },
@@ -340,12 +341,44 @@ const FILTER_DIMS = [
   { key: 'channelName',  label: 'Store Channel Name' },
 ];
 
+function parseMonthYear(str) {
+  if (!str) return 0;
+  const m = String(str).trim().match(/^([A-Za-z]{3})[- ]?(\d{2,4})$/);
+  if (!m) return 0;
+  const MONTHS = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+  const monNum = MONTHS[m[1].toLowerCase()] || 0;
+  let yr = parseInt(m[2], 10);
+  if (yr < 100) yr += 2000;
+  return yr * 100 + monNum;
+}
+
+function getCurrentMonthKey() {
+  const d = new Date();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`;
+}
+
+function getDefaultMonth() {
+  const cur = getCurrentMonthKey();
+  const available = getAvailableOptions('salesMonth');
+  if (available.includes(cur)) return cur;
+  if (available.length > 0) return available[available.length - 1];
+  return cur;
+}
+
 const state = {
   filters: {},      // key -> Set of selected values (empty Set = All)
   dateFrom: null,
   dateTo: null,
 };
-FILTER_DIMS.forEach(d => state.filters[d.key] = new Set());
+FILTER_DIMS.forEach(d => {
+  if (d.key === 'salesMonth') {
+    const def = getDefaultMonth();
+    state.filters[d.key] = def ? new Set([def]) : new Set();
+  } else {
+    state.filters[d.key] = new Set();
+  }
+});
 
 const fmtINR = n => '\u20B9' + Math.round(n).toLocaleString('en-IN');
 const fmtNum = n => Math.round(n).toLocaleString('en-IN');
@@ -358,23 +391,40 @@ const fmtCompactINR = n => {
 
 function minMaxDates(records) {
   let mn = null, mx = null;
+  const monthSel = state.filters && state.filters['salesMonth'];
   records.forEach(r => {
     if (!r.saleDate) return;
+    if (monthSel && monthSel.size > 0 && !monthSel.has(r.salesMonth)) return;
     if (!mn || r.saleDate < mn) mn = r.saleDate;
     if (!mx || r.saleDate > mx) mx = r.saleDate;
   });
   return [mn, mx];
 }
 
-function initFilterDefaults() {
+function initFilterDefaults(preserveMonth = false) {
   state.dateFrom = null;
   state.dateTo = null;
-  FILTER_DIMS.forEach(d => state.filters[d.key] = new Set());
+  FILTER_DIMS.forEach(d => {
+    if (d.key === 'salesMonth') {
+      if (preserveMonth && state.filters[d.key] && state.filters[d.key].size > 0) {
+        return;
+      }
+      const def = getDefaultMonth();
+      state.filters[d.key] = def ? new Set([def]) : new Set();
+    } else {
+      state.filters[d.key] = new Set();
+    }
+  });
 }
 
 function getAvailableOptions(key) {
   const s = new Set();
-  if (key === 'category') {
+  if (key === 'salesMonth') {
+    RECORDS.forEach(r => {
+      if (r.salesMonth !== null && r.salesMonth !== undefined && r.salesMonth !== '') s.add(r.salesMonth);
+    });
+    return Array.from(s).sort((a, b) => parseMonthYear(a) - parseMonthYear(b));
+  } else if (key === 'category') {
     RECORDS.forEach(r => {
       if (r.category !== null && r.category !== undefined && r.category !== '') s.add(r.category);
     });
@@ -429,8 +479,17 @@ function recordMatchesDims(r) {
   if (state.dateTo && (!r.saleDate || r.saleDate > state.dateTo)) return false;
   for (const d of FILTER_DIMS) {
     const sel = state.filters[d.key];
-    if (sel.size === 0) continue;
-    if (!sel.has(r[d.key])) return false;
+    if (d.key === 'salesMonth') {
+      if (!sel || sel.size === 0) {
+        const def = getDefaultMonth();
+        if (def && r.salesMonth !== def) return false;
+      } else {
+        if (!sel.has(r.salesMonth)) return false;
+      }
+    } else {
+      if (!sel || sel.size === 0) continue;
+      if (!sel.has(r[d.key])) return false;
+    }
   }
   return true;
 }
@@ -1012,7 +1071,7 @@ function renderAll() {
       isPulse: true
     },
     {
-      label: 'ROI \u2013 Per Promoter',
+      label: 'Expected ROI \u2013 Per Promoter',
       value: `${roi.toFixed(2)} <span style="font-size:11.5px;font-weight:700;opacity:0.9;">(${roiTargetPct}% of 15 target)</span>`,
       sub: 'avg. of ' + fmtNum(roiInfo.promoterCount) + ' promoters \u00b7 ' + fmtCompactINR(roiInfo.totalCtc) + ' CTC',
       icon: SVG_ICONS.roi,
@@ -1341,14 +1400,28 @@ function buildFilterUI() {
     list.addEventListener('change', (e) => {
       if (e.target.tagName !== 'INPUT') return;
       const v = e.target.value;
-      if (e.target.checked) state.filters[d.key].add(v); else state.filters[d.key].delete(v);
+      if (e.target.checked) {
+        state.filters[d.key].add(v);
+      } else {
+        state.filters[d.key].delete(v);
+        if (d.key === 'salesMonth' && state.filters[d.key].size === 0) {
+          const def = getDefaultMonth();
+          if (def) state.filters[d.key].add(def);
+          renderOptList();
+        }
+      }
       handleFilterSelectionChange(d.key);
     });
 
     searchInput.addEventListener('input', (e) => renderOptList(e.target.value));
 
     wrap.querySelector('.clear-opt').addEventListener('click', () => {
-      state.filters[d.key].clear();
+      if (d.key === 'salesMonth') {
+        const def = getDefaultMonth();
+        state.filters[d.key] = def ? new Set([def]) : new Set();
+      } else {
+        state.filters[d.key].clear();
+      }
       handleFilterSelectionChange(d.key);
     });
 
@@ -1363,6 +1436,15 @@ function buildFilterUI() {
 }
 
 function handleFilterSelectionChange(changedKey) {
+  if (changedKey === 'salesMonth') {
+    state.dateFrom = null;
+    state.dateTo = null;
+    const [mn, mx] = minMaxDates(RECORDS);
+    const dFrom = document.getElementById('dateFromInput');
+    const dTo = document.getElementById('dateToInput');
+    if (dFrom) { dFrom.value = ''; dFrom.min = mn || ''; dFrom.max = mx || ''; }
+    if (dTo) { dTo.value = ''; dTo.min = mn || ''; dTo.max = mx || ''; }
+  }
   if (changedKey === 'category' || changedKey === 'techCat' || changedKey === 'subCat') {
     pruneDependentFilters();
     ['category', 'techCat', 'subCat'].forEach(k => {
@@ -1380,7 +1462,7 @@ function handleFilterSelectionChange(changedKey) {
 }
 
 document.getElementById('resetBtn').addEventListener('click', () => {
-  initFilterDefaults();
+  initFilterDefaults(false);
   buildFilterUI();
   renderAll();
 });
@@ -1397,6 +1479,7 @@ const COLMAP = {
   'Product': 'category', 'Product Category': 'techCat', 'Product Sub Category': 'subCat',
   'Sales Value': 'value', 'Store Channel Type': 'channelType', 'Store Channel Name': 'channelName',
   'Partner Code': 'partnerCode', 'Promoter CTC': 'ctc', 'Promoter Salary': 'ctc', 'User Role': 'role', 'Role': 'role', 'City': 'city', 'Store City': 'city', 'City Name': 'city',
+  'Sales Month': 'salesMonth', 'Month': 'salesMonth',
 };
 /* Robustly parse a date cell: handles raw Excel serial numbers (numeric or string),
    JS Date objects, DD-MMM-YY, DD-MM-YYYY, or YYYY-MM-DD strings deterministically. */
@@ -1498,6 +1581,17 @@ async function fetchLiveData(force = false) {
       Object.keys(COLMAP).forEach(k => rec[COLMAP[k]] = r[k]);
       rec.saleDate = toISO(r['Sale Date']); // column P, used as-is — no derivation
       rec.backdated = !!toISO(r['Add this in case of backdates sales']);
+      rec.salesMonth = r['Sales Month'] ? String(r['Sales Month']).trim() : '';
+      if (!rec.salesMonth && rec.saleDate) {
+        const parts = rec.saleDate.split('-');
+        if (parts.length >= 2) {
+          const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          const mIdx = parseInt(parts[1], 10) - 1;
+          if (mIdx >= 0 && mIdx < 12) {
+            rec.salesMonth = `${MONTH_NAMES[mIdx]}-${parts[0].slice(-2)}`;
+          }
+        }
+      }
       rec.qty = Number(rec.qty) || 0;
       rec.value = Number(rec.value) || 0;
       rec.price = Number(rec.price) || 0;
@@ -1507,7 +1601,7 @@ async function fetchLiveData(force = false) {
     if (newRecords.length > 0) {
       RECORDS = newRecords;
       refreshRoleSets();
-      initFilterDefaults();
+      initFilterDefaults(true);
       buildFilterUI();
       renderAll();
       lastFetchTime = Date.now();
