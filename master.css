@@ -55,7 +55,7 @@ button{font-family:inherit;}
 
 /* ---------------- Header ---------------- */
 header.topbar{
-  position:sticky; top:0; z-index:60;
+  position:sticky; top:var(--nav-h,0px); z-index:60;
   background:linear-gradient(180deg,var(--teal-900) 0%, var(--teal-800) 100%);
   box-shadow:0 4px 24px rgba(9,33,30,.28);
 }
@@ -148,6 +148,15 @@ header.topbar{
   border-radius:var(--radius);
   box-shadow:var(--shadow-sm);
   padding:16px 18px;
+  /* Frozen filter bar: sticks right below the tab bar + header (heights set by layout.js) */
+  position:sticky;
+  top:calc(var(--nav-h,0px) + var(--top-h,0px));
+  z-index:55;
+  transition:border-radius .15s ease, box-shadow .15s ease;
+}
+.filterbar.is-stuck{
+  border-top-left-radius:0;border-top-right-radius:0;border-top-color:transparent;
+  box-shadow:0 10px 24px rgba(14,46,42,.12), 0 2px 6px rgba(14,46,42,.06);
 }
 .filterbar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .filterbar-head .eyebrow{margin:0;}
@@ -432,7 +441,9 @@ footer .brand-line img{height:14px;opacity:.6;}
   white-space: nowrap;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  flex-shrink: 0;
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: max-content;
 }
 .nav-browser-tab:hover {
   background: rgba(255, 255, 255, 0.11);
@@ -475,6 +486,7 @@ footer .brand-line img{height:14px;opacity:.6;}
 }
 
 @media (max-width:760px){
+  .filterbar{position:relative;top:auto;}
   .browser-tabbar { padding: 6px 8px 0 8px; }
   .nav-browser-tab { padding: 6px 12px 7px 10px; font-size: 11px; }
   .wrap{padding:0 14px 48px;}

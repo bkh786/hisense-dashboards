@@ -294,74 +294,25 @@ html_content = '''<!DOCTYPE html>
 <nav class="browser-tab-nav" aria-label="Dashboard navigation tabs">
   <div class="browser-tabbar">
     <div class="browser-tabs-track">
-      <a href="index.html" class="nav-browser-tab" title="Hisense Sales Dashboard">
-        <span class="nav-tab-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10"/>
-            <line x1="12" y1="20" x2="12" y2="4"/>
-            <line x1="6" y1="20" x2="6" y2="14"/>
-          </svg>
-        </span>
-        <span class="nav-tab-title">Hisense Sales Dashboard</span>
+      <a href="index.html" class="nav-browser-tab" id="tab-index" title="Sales">
+        <span class="nav-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+        <span class="nav-tab-title">Sales</span>
       </a>
-      <a href="attendance.html" class="nav-browser-tab" title="Attendance Dashboard">
-        <span class="nav-tab-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="8.5" cy="7" r="4"/>
-            <polyline points="17 11 19 13 23 9"/>
-          </svg>
-        </span>
-        <span class="nav-tab-title">Attendance Dashboard</span>
+      <a href="display.html" class="nav-browser-tab" id="tab-display" title="Display Availability">
+        <span class="nav-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+        <span class="nav-tab-title">Display Availability</span>
       </a>
-      <a href="display.html" class="nav-browser-tab" title="Display Availability Dashboard">
-        <span class="nav-tab-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-          </svg>
-        </span>
-        <span class="nav-tab-title">Display Availability Dashboard</span>
+      <a href="display_comparison.html" class="nav-browser-tab" id="tab-display-comparison" title="Display Comparison">
+        <span class="nav-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="6" y="10" width="3.2" height="8" rx="0.6"/><rect x="11" y="6" width="3.2" height="12" rx="0.6"/><path d="M17 13l2-2 2 2"/><line x1="19" y1="11" x2="19" y2="18"/></svg></span>
+        <span class="nav-tab-title">Display Comparison</span>
       </a>
-      <a href="hiring.html" class="nav-browser-tab active" title="Hiring Status Dashboard">
-        <span class="nav-tab-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-        </span>
-        <span class="nav-tab-title">Hiring Status Dashboard</span>
+      <a href="hiring.html" class="nav-browser-tab active" id="tab-hiring" title="Hiring Status">
+        <span class="nav-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        <span class="nav-tab-title">Hiring Status</span>
       </a>
-      <a href="#" class="nav-browser-tab" title="Fixture Availability Dashboard">
-        <span class="nav-tab-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-            <line x1="12" y1="22.08" x2="12" y2="12"/>
-          </svg>
-        </span>
-        <span class="nav-tab-title">Fixture Availability Dashboard</span>
-      </a>
-      <a href="#" class="nav-browser-tab" title="Competition Sell Out Dashboard">
-        <span class="nav-tab-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-        </span>
-        <span class="nav-tab-title">Competition Sell Out Dashboard</span>
-      </a>
-      <a href="#" class="nav-browser-tab" title="TL Visit Dashboard">
-        <span class="nav-tab-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-            <circle cx="12" cy="10" r="3"/>
-          </svg>
-        </span>
-        <span class="nav-tab-title">TL Visit Dashboard</span>
+      <a href="attendance.html" class="nav-browser-tab" id="tab-attendance" title="Attendance">
+        <span class="nav-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg></span>
+        <span class="nav-tab-title">Attendance</span>
       </a>
     </div>
   </div>
@@ -1953,6 +1904,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 </script>
+<script src="layout.js"></script>
 </body>
 </html>
 '''
