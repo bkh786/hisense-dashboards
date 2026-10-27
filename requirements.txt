@@ -1,0 +1,2 @@
+# Hisense AI Copilot - Python Serverless Function Requirements
+# Built with pure Python standard library (urllib, json, os, time, http.server)
