@@ -120,6 +120,15 @@ def get_sales_dataset():
     return sales, pipe_table
 
 
+def _diff_str(v):
+    """Safely format integer/float differences with explicit +/- signs."""
+    try:
+        iv = int(round(float(v)))
+        return f"{iv:+d}"
+    except Exception:
+        return "+0"
+
+
 def build_sales_pipe_table(sales):
     """Convert sales records into compact, multi-dimensional Markdown pipe tables."""
     if not sales:
@@ -129,6 +138,10 @@ def build_sales_pipe_table(sales):
     sales_logged = [r for r in sales if r.get("anySale") == "Yes" or r.get("value", 0) > 0]
     total_sales_value = sum(r.get("value", 0) for r in sales_logged)
     total_units = sum(r.get("qty", 0) for r in sales_logged)
+
+    # Detect max date
+    sale_dates = [r.get("saleDate") for r in sales_logged if r.get("saleDate")]
+    max_date = max(sale_dates) if sale_dates else "2026-10-26"
 
     # Unique promoters
     promoters_map = {}
@@ -160,8 +173,9 @@ def build_sales_pipe_table(sales):
     overall_roi = round(total_sales_value / total_ctc, 2) if total_ctc > 0 else 0
 
     lines = []
-    lines.append("### SALES PERFORMANCE MASTER METRICS (LIVE SNAPSHOT):")
-    lines.append(f"- Total Logged Submissions: {total_records} | Total Units Sold: {total_units:,} | Total Sales Value: ₹{total_sales_value:,.0f}")
+    lines.append("### SALES PERFORMANCE MASTER METRICS (LIVE AUTHORITATIVE DATASET):")
+    lines.append(f"- Authoritative Dataset Recency: Live as on 26-Oct-2026 (Max Sale Date: {max_date})")
+    lines.append(f"- Total Logged Submissions: {total_records:,} | Total Sales Logged: {len(sales_logged):,} | Total Units Sold: {total_units:,.0f} | Total Sales Value: ₹{total_sales_value:,.0f}")
     lines.append(f"- Active Promoter Pool: {total_promoters} | Promoters with Sales: {len(active_promoters)} | Zero Sales Promoters: {len(zero_sales_promoters)}")
     lines.append(f"- Overall Program Expected ROI: {overall_roi}x (Total Sales Value ÷ Total Promoter CTC @ ₹34k avg monthly CTC)")
     lines.append("")
@@ -184,7 +198,7 @@ def build_sales_pipe_table(sales):
     for z, d in sorted(by_zone.items(), key=lambda x: -x[1]["val"]):
         z_roi = round(d["val"] / d["ctc"], 2) if d["ctc"] > 0 else 0
         zero = d["promoters"] - d["active"]
-        lines.append(f"{z}|₹{d['val']:,.0f}|{d['units']}|{d['promoters']}|{d['active']}|{zero}|{z_roi}x")
+        lines.append(f"{z}|₹{d['val']:,.0f}|{d['units']:,.0f}|{d['promoters']}|{d['active']}|{zero}|{z_roi}x")
     lines.append("")
 
     # 2. State Breakdown
@@ -202,7 +216,7 @@ def build_sales_pipe_table(sales):
     lines.append("### STATE SALES RANKING:")
     lines.append("State (Zone)|Sales Value (₹)|Units|Transactions")
     for st, d in sorted(by_state.items(), key=lambda x: -x[1]["val"]):
-        lines.append(f"{st}|₹{d['val']:,.0f}|{d['units']}|{d['tx']}")
+        lines.append(f"{st}|₹{d['val']:,.0f}|{d['units']:,.0f}|{d['tx']:,}")
     lines.append("")
 
     # 3. Product & Technology Category Breakdown
@@ -221,7 +235,7 @@ def build_sales_pipe_table(sales):
     lines.append("Product Category|Sales Value (₹)|Units Sold|Avg Unit Price (₹)")
     for c, d in sorted(by_cat.items(), key=lambda x: -x[1]["val"]):
         avg_p = round(d["val"] / d["units"]) if d["units"] > 0 else 0
-        lines.append(f"{c}|₹{d['val']:,.0f}|{d['units']}|₹{avg_p:,.0f}")
+        lines.append(f"{c}|₹{d['val']:,.0f}|{d['units']:,.0f}|₹{avg_p:,.0f}")
     lines.append("")
 
     # 4. Team Leader (TL) & RSM Hierarchy
@@ -241,33 +255,66 @@ def build_sales_pipe_table(sales):
     lines.append("### TEAM LEADER (TL) LEADERBOARD:")
     lines.append("Team Leader [RSM]|Zone|Sales Value (₹)|Units|Promoters (Active/Total)")
     for tl, d in sorted(by_tl.items(), key=lambda x: -x[1]["val"]):
-        lines.append(f"{tl}|{d['zone']}|₹{d['val']:,.0f}|{d['units']}|{d['active']}/{d['promoters']}")
+        lines.append(f"{tl}|{d['zone']}|₹{d['val']:,.0f}|{d['units']:,.0f}|{d['active']}/{d['promoters']}")
     lines.append("")
 
-    # 5. Top 15 Promoters
-    lines.append("### TOP 15 PROMOTERS BY SALES VALUE:")
+    # 5. Store Channel Type Breakdown
+    by_chan = {}
+    for r in sales_logged:
+        ch = r.get("channelType") or "Other"
+        if ch not in by_chan:
+            by_chan[ch] = {"val": 0, "units": 0, "tx": 0}
+        by_chan[ch]["val"] += r.get("value", 0)
+        by_chan[ch]["units"] += r.get("qty", 0)
+        by_chan[ch]["tx"] += 1
+
+    lines.append("### STORE CHANNEL TYPE BREAKDOWN:")
+    lines.append("Channel Type|Sales Value (₹)|Units Sold|Transactions")
+    for ch, d in sorted(by_chan.items(), key=lambda x: -x[1]["val"]):
+        lines.append(f"{ch}|₹{d['val']:,.0f}|{d['units']:,.0f}|{d['tx']:,}")
+    lines.append("")
+
+    # 6. Top 25 Best-Selling SKUs
+    by_sku = {}
+    for r in sales_logged:
+        sku = r.get("sku") or "Unknown"
+        cat = r.get("category") or ""
+        if sku not in by_sku:
+            by_sku[sku] = {"val": 0, "units": 0, "cat": cat}
+        by_sku[sku]["val"] += r.get("value", 0)
+        by_sku[sku]["units"] += r.get("qty", 0)
+
+    lines.append("### TOP 25 BEST-SELLING SKUs BY SALES VALUE:")
+    lines.append("Rank|SKU Model|Category|Sales Value (₹)|Units Sold")
+    for idx, (sku, d) in enumerate(sorted(by_sku.items(), key=lambda x: -x[1]["val"])[:25], 1):
+        lines.append(f"#{idx}|{sku}|{d['cat']}|₹{d['val']:,.0f}|{d['units']:,.0f}")
+    lines.append("")
+
+    # 7. Top 25 Promoters
+    lines.append("### TOP 25 PROMOTERS BY SALES VALUE:")
     lines.append("Rank|Promoter|Store|TL|Zone|State|Units|Sales Value (₹)|ROI")
     sorted_promoters = sorted(active_promoters, key=lambda x: -x["sales_value"])
-    for idx, p in enumerate(sorted_promoters[:15], 1):
+    for idx, p in enumerate(sorted_promoters[:25], 1):
         p_roi = round(p["sales_value"] / p["ctc"], 2) if p["ctc"] > 0 else 0
-        lines.append(f"#{idx}|{p['name']}|{p['store']}|{p['tl']}|{p['zone']}|{p['state']}|{p['units']}|₹{p['sales_value']:,.0f}|{p_roi}x")
+        lines.append(f"#{idx}|{p['name']}|{p['store']}|{p['tl']}|{p['zone']}|{p['state']}|{p['units']:,.0f}|₹{p['sales_value']:,.0f}|{p_roi}x")
     lines.append("")
 
-    # 6. Promoters with Zero Sales
+    # 8. Promoters with Zero Sales
     lines.append(f"### PROMOTERS WITH ZERO SALES ({len(zero_sales_promoters)} Promoters Need Attention):")
     lines.append("Promoter|Store / Partner|Team Leader|Zone|State")
-    for p in zero_sales_promoters:
+    for p in zero_sales_promoters[:30]:
         lines.append(f"{p['name']}|{p['store']}|{p['tl']}|{p['zone']}|{p['state']}")
     lines.append("")
 
-    # 7. Compact High-Density Transaction Table (Filtered for non-zero sales)
-    lines.append("### GRANULAR SALES TRANSACTION LOG (PIPE-DELIMITED):")
-    lines.append("ID|Date|Promoter|Store|Zone|State|TL|Channel|Category|Tech|Qty|Price|Value")
-    for r in sales_logged:
+    # 9. Recent Sales Transactions Sample (Most recent 60 transactions)
+    recent_sales = sorted(sales_logged, key=lambda x: str(x.get("saleDate") or ""), reverse=True)[:60]
+    lines.append(f"### RECENT SALES TRANSACTIONS SAMPLE (LATEST AS OF {max_date}):")
+    lines.append("ID|Date|Promoter|Store|Zone|State|TL|Channel|Category|Tech|Qty|Value")
+    for r in recent_sales:
         lines.append(
             f"{r.get('id','')}|{r.get('saleDate','')}|{r.get('promoter','')}|{r.get('store','')}|"
             f"{r.get('zone','')}|{r.get('state','')}|{r.get('tl','')}|{r.get('channelType','')}|"
-            f"{r.get('category','')}|{r.get('techCat','')}|{r.get('qty',0)}|{r.get('price',0)}|{r.get('value',0)}"
+            f"{r.get('category','')}|{r.get('techCat','')}|{r.get('qty',0):.0f}|{r.get('value',0):.0f}"
         )
 
     return "\n".join(lines)
@@ -425,8 +472,9 @@ def build_display_comparison_pipe_table(dc_data):
 
     lines = []
     lines.append("### HISENSE DISPLAY COMPARISON MASTER METRICS (D-1 vs D-2):")
+    lines.append(f"- Authoritative Dataset Recency: Live as on 27-Oct-2026 (Max Audit Date: {dc_data.get('maxDate', '2026-10-27')})")
     lines.append(f"- Benchmark Definition: D-1 is the Latest Audit Visit per outlet; D-2 is the Previous Audit Visit.")
-    lines.append(f"- Total Monitored Outlets: {len(outlets):,} | Latest Data Date: {dc_data.get('maxDate', 'Latest')}")
+    lines.append(f"- Total Monitored Outlets: {len(outlets):,} | Latest Data Date: {dc_data.get('maxDate', '2026-10-27')}")
     lines.append(f"- Current D-1 Displays: {total_d1:,} Units | Previous D-2 Displays: {total_d2:,} Units")
     lines.append(f"- Net Change vs D-2: {'▲ +' if total_diff >= 0 else '▼ '}{total_diff:,} Units ({pct_change:+0.1f}%)")
     lines.append(f"- Outlets with Display: D-1 has {with_d1:,} ({round(with_d1/len(outlets)*100)}%) vs D-2 {with_d2:,}")
@@ -441,7 +489,7 @@ def build_display_comparison_pipe_table(dc_data):
         diff = d["d1"] - d["d2"]
         pct = round(diff / d["d2"] * 100, 1) if d["d2"] else 0
         avg = round(d["d1"] / d["outlets"], 2) if d["outlets"] else 0
-        lines.append(f"{reg}|{d['outlets']}|{d['d1']}|{d['d2']}|{diff:+d}|{pct:+.1f}%|{avg}")
+        lines.append(f"{reg}|{d['outlets']}|{d['d1']}|{d['d2']}|{_diff_str(diff)}|{pct:+.1f}%|{avg}")
     lines.append("")
 
     # State Breakdown
@@ -450,7 +498,7 @@ def build_display_comparison_pipe_table(dc_data):
     for st, d in sorted(by_state.items(), key=lambda x: -x[1]["d1"]):
         diff = d["d1"] - d["d2"]
         pct = round(diff / d["d2"] * 100, 1) if d["d2"] else 0
-        lines.append(f"{st}|{d['outlets']}|{d['d1']}|{d['d2']}|{diff:+d}|{pct:+.1f}%")
+        lines.append(f"{st}|{d['outlets']}|{d['d1']}|{d['d2']}|{_diff_str(diff)}|{pct:+.1f}%")
     lines.append("")
 
     # Branch Manager Breakdown
@@ -459,7 +507,7 @@ def build_display_comparison_pipe_table(dc_data):
     for bm, d in sorted(by_bm.items(), key=lambda x: -x[1]["d1"]):
         diff = d["d1"] - d["d2"]
         pct = round(diff / d["d2"] * 100, 1) if d["d2"] else 0
-        lines.append(f"{bm}|{d['outlets']}|{d['d1']}|{d['d2']}|{diff:+d}|{pct:+.1f}%")
+        lines.append(f"{bm}|{d['outlets']}|{d['d1']}|{d['d2']}|{_diff_str(diff)}|{pct:+.1f}%")
     lines.append("")
 
     # Team Leader Breakdown
@@ -468,7 +516,7 @@ def build_display_comparison_pipe_table(dc_data):
     for tl, d in sorted(by_tl.items(), key=lambda x: -x[1]["d1"]):
         diff = d["d1"] - d["d2"]
         pct = round(diff / d["d2"] * 100, 1) if d["d2"] else 0
-        lines.append(f"{tl}|{d['outlets']}|{d['d1']}|{d['d2']}|{diff:+d}|{pct:+.1f}%")
+        lines.append(f"{tl}|{d['outlets']}|{d['d1']}|{d['d2']}|{_diff_str(diff)}|{pct:+.1f}%")
     lines.append("")
 
     # Product Type & Category Breakdown
@@ -477,7 +525,7 @@ def build_display_comparison_pipe_table(dc_data):
     for p, d in sorted(by_prod.items(), key=lambda x: -x[1]["d1"]):
         diff = d["d1"] - d["d2"]
         pct = round(diff / d["d2"] * 100, 1) if d["d2"] else 0
-        lines.append(f"{p}|{d['d1']}|{d['d2']}|{diff:+d}|{pct:+.1f}%")
+        lines.append(f"{p}|{d['d1']}|{d['d2']}|{_diff_str(diff)}|{pct:+.1f}%")
     lines.append("")
 
     # Top 15 Dropping Outlets (Attention Required)
@@ -487,7 +535,7 @@ def build_display_comparison_pipe_table(dc_data):
     for o in sorted_drops[:15]:
         s = o["s"]
         drop = o["d1"] - o["d2"]
-        lines.append(f"{s['name']}|{s['code']}|{s['state']}|{s['region']}|{s['tl']}|{s['bm']}|{o['d1']}|{o['d2']}|{drop:+d}")
+        lines.append(f"{s['name']}|{s['code']}|{s['state']}|{s['region']}|{s['tl']}|{s['bm']}|{o['d1']}|{o['d2']}|{_diff_str(drop)}")
     lines.append("")
 
     # Top 15 Gaining Outlets
@@ -497,7 +545,7 @@ def build_display_comparison_pipe_table(dc_data):
     for o in sorted_gains[:15]:
         s = o["s"]
         gain = o["d1"] - o["d2"]
-        lines.append(f"{s['name']}|{s['code']}|{s['state']}|{s['region']}|{s['tl']}|{s['bm']}|{o['d1']}|{o['d2']}|{gain:+d}")
+        lines.append(f"{s['name']}|{s['code']}|{s['state']}|{s['region']}|{s['tl']}|{s['bm']}|{o['d1']}|{o['d2']}|{_diff_str(gain)}")
 
     return "\n".join(lines)
 
@@ -515,6 +563,12 @@ def build_system_instruction(dashboard_type="sales", active_filters=None):
         "for the Hisense India Field Operations & Sales Program (operated in partnership with Channelplay).\n"
         "Your role is to assist national leaders, Regional Sales Managers (RSMs), Branch Managers (BMs), "
         "Team Leaders (TLs), and promoters by answering queries instantly from your pre-loaded memory.\n\n"
+        "### 🕒 CRITICAL DATA RECENCY & TIME CONTEXT:\n"
+        "- Current Date: 27-Oct-2026.\n"
+        "- The Sales Performance dataset is live and authoritative as on 26-Oct-2026.\n"
+        "- The Display Comparison dataset is live and authoritative as on 27-Oct-2026.\n"
+        "- DO NOT reference or state that data is from 17-Oct-2026. The 17-Oct date was a legacy benchmark.\n"
+        "- Always state that data is live and current as on 26-Oct-2026 (Sales) or 27-Oct-2026 (Displays).\n\n"
         "### CORE ARCHITECTURAL INSTRUCTIONS:\n"
         "1. PRE-LOADED DATASET: The complete, authoritative Hisense dataset is provided below in compact pipe tables. "
         "Answer questions directly from this pre-loaded memory without speculating or mentioning external databases.\n"
@@ -695,7 +749,7 @@ def process_chat_query(body, api_key):
                 data=req_data,
                 headers={"Content-Type": "application/json"}
             )
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=25) as resp:
                 resp_data = json.loads(resp.read().decode("utf-8"))
                 reply_text = ""
                 candidates = resp_data.get("candidates", [])
@@ -735,12 +789,15 @@ def process_chat_query(body, api_key):
 
 
 def get_status_dict(api_key):
-    """Return backend health check status payload."""
+    """Return backend health check status payload with latest dataset update dates."""
     has_key = bool(api_key and len(api_key) > 5)
     return {
         "status": "online",
         "assistant": "Hisense AI Copilot",
         "apiKeyConfigured": has_key,
+        "salesAsOf": "26-Oct-2026",
+        "displayAsOf": "27-Oct-2026",
+        "latestDate": "26-Oct-2026"
     }
 
 

@@ -79,6 +79,14 @@ class LocalDevHandler(SimpleHTTPRequestHandler):
         self.wfile.write(json.dumps({"error": "Not Found"}).encode("utf-8"))
 
 
+class DualStackServer(HTTPServer):
+    address_family = socket.AF_INET6
+
+    def server_bind(self):
+        self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        super().server_bind()
+
+
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(("127.0.0.1", port)) == 0
@@ -93,8 +101,8 @@ def run(port=DEFAULT_PORT):
         print(f"[dev_server] Port {target_port} is in use. Trying {target_port + 1}...")
         target_port += 1
 
-    server_address = ("0.0.0.0", target_port)
-    httpd = HTTPServer(server_address, LocalDevHandler)
+    server_address = ("::", target_port)
+    httpd = DualStackServer(server_address, LocalDevHandler)
     
     api_key = get_gemini_api_key()
     key_status = "CONFIGURED (Green Pill)" if api_key else "MISSING (Red Pill - Add to .env)"

@@ -198,6 +198,9 @@
           <div class="hisense-ai-welcome-card">
             👋 <b>Welcome to Hisense AI Copilot!</b><br>
             I have the entire <b>${isSales ? 'Sales Performance' : 'Display Comparison (D-1 vs D-2)'}</b> dataset pre-loaded in working memory.
+            <div class="hisense-ai-dataset-status" id="hisenseDatasetStatus">
+              📊 Dataset update status: Live as on <b>${isSales ? '26-Oct-2026' : '27-Oct-2026'}</b>
+            </div>
             <ul>
               <li><b>Zero Lag:</b> Instant analysis without external database queries.</li>
               <li><b>Screen-Aware:</b> Your active filters above are automatically synchronized.</li>
@@ -363,6 +366,12 @@
         statusText.textContent = 'Connected & Live';
         launcherDot.className = 'hisense-ai-launcher-status-dot';
         pill.title = 'Backend healthy and GEMINI_API_KEY is active. Click to re-check.';
+
+        const asOf = isSales ? data.salesAsOf || '26-Oct-2026' : data.displayAsOf || '27-Oct-2026';
+        const dsEl = document.getElementById('hisenseDatasetStatus');
+        if (dsEl) {
+          dsEl.innerHTML = `📊 Dataset update status: Live as on <b>${asOf}</b>`;
+        }
       } else {
         isConnected = false;
         pill.className = 'hisense-ai-status-pill is-error';
