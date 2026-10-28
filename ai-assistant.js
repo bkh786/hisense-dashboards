@@ -13,12 +13,15 @@
   // State
   let isOpen = false;
   let isMaximized = false;
-  let isConnected = false;
+  let isConnected = (function () {
+    try { return sessionStorage.getItem('hisense_ai_connected') === 'true'; } catch (e) { return false; }
+  })();
   let isCheckingHealth = false;
   let isSending = false;
   let conversationHistory = [];
   let cachedActiveFilters = {};
   let currentDashboard = 'sales';
+  let resolvedApiUrl = '/api/chat';
 
   // Determine current dashboard type
   function detectDashboardType() {
@@ -125,7 +128,7 @@
           </svg>
         </div>
         <span class="hisense-ai-launcher-label">AI Copilot</span>
-        <span class="hisense-ai-launcher-status-dot offline" id="hisenseLauncherDot"></span>
+        <span class="hisense-ai-launcher-status-dot" id="hisenseLauncherDot"></span>
       </button>
 
       <!-- Chat Drawer -->
@@ -149,9 +152,9 @@
           </div>
 
           <!-- Live Status Pill (No model names, clickable for health check) -->
-          <div class="hisense-ai-status-pill is-error" id="hisenseStatusPill" title="Click to verify backend connection">
+          <div class="hisense-ai-status-pill ${isConnected ? '' : 'is-checking'}" id="hisenseStatusPill" title="${isConnected ? 'Connected & Live. Click to re-verify.' : 'Connecting to Hisense AI Copilot...'}">
             <span class="hisense-ai-status-dot-pulse"></span>
-            <span id="hisenseStatusText">Checking...</span>
+            <span id="hisenseStatusText">${isConnected ? 'Connected & Live' : 'Connecting...'}</span>
           </div>
 
           <!-- Controls -->
@@ -259,10 +262,20 @@
       isOpen = !isOpen;
       drawer.classList.toggle('is-open', isOpen);
       if (isOpen) {
+        if (!isConnected) {
+          checkHealth();
+        }
         syncFilters();
         setTimeout(() => input.focus(), 150);
       }
     });
+
+    // Auto-reconnect interval when disconnected
+    setInterval(() => {
+      if (!isConnected && !isCheckingHealth) {
+        checkHealth();
+      }
+    }, 15000);
 
     closeBtn.addEventListener('click', () => {
       isOpen = false;
@@ -341,8 +354,26 @@
   }
 
   // =========================================================================
-  // HEALTH CHECK (LIVE STATUS PILL)
+  // HEALTH CHECK (LIVE STATUS PILL & MULTI-ENDPOINT RESOLVER)
   // =========================================================================
+  async function testEndpoint(url) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(url, { 
+        method: 'GET', 
+        cache: 'no-store',
+        signal: controller.signal 
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data;
+    } catch (err) {
+      return null;
+    }
+  }
+
   async function checkHealth(manual = false) {
     if (isCheckingHealth) return;
     isCheckingHealth = true;
@@ -351,40 +382,81 @@
     const statusText = document.getElementById('hisenseStatusText');
     const launcherDot = document.getElementById('hisenseLauncherDot');
 
-    if (manual) {
-      statusText.textContent = 'Verifying...';
+    if (pill && !isConnected) {
+      pill.className = 'hisense-ai-status-pill is-checking';
+      if (statusText) statusText.textContent = manual ? 'Verifying...' : 'Connecting...';
     }
 
     try {
-      const res = await fetch('/api/chat', { method: 'GET', cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      // 1. Build prioritized list of candidate endpoints
+      const candidates = [resolvedApiUrl];
+      if (resolvedApiUrl !== '/api/chat') candidates.push('/api/chat');
 
-      if (data.status === 'online' && data.apiKeyConfigured) {
-        isConnected = true;
-        pill.className = 'hisense-ai-status-pill';
-        statusText.textContent = 'Connected & Live';
-        launcherDot.className = 'hisense-ai-launcher-status-dot';
-        pill.title = 'Backend healthy and GEMINI_API_KEY is active. Click to re-check.';
+      // Local dev fallback if running locally
+      const isLocal = window.location.hostname === 'localhost' || 
+                      window.location.hostname === '127.0.0.1' || 
+                      window.location.protocol === 'file:';
+      if (isLocal) {
+        if (!candidates.includes('http://localhost:8000/api/chat')) {
+          candidates.push('http://localhost:8000/api/chat');
+        }
+      }
 
-        const asOf = isSales ? data.salesAsOf || '26-Oct-2026' : data.displayAsOf || '27-Oct-2026';
-        const dsEl = document.getElementById('hisenseDatasetStatus');
-        if (dsEl) {
-          dsEl.innerHTML = `📊 Dataset update status: Live as on <b>${asOf}</b>`;
+      // Always include production Vercel cloud endpoint fallback
+      if (!candidates.includes('https://hisense-dashboards.vercel.app/api/chat')) {
+        candidates.push('https://hisense-dashboards.vercel.app/api/chat');
+      }
+
+      let workingData = null;
+      let workingUrl = null;
+
+      for (const url of candidates) {
+        const data = await testEndpoint(url);
+        if (data && data.status === 'online') {
+          workingData = data;
+          workingUrl = url;
+          break;
+        }
+      }
+
+      if (workingData && workingUrl) {
+        resolvedApiUrl = workingUrl;
+        if (workingData.apiKeyConfigured) {
+          isConnected = true;
+          try { sessionStorage.setItem('hisense_ai_connected', 'true'); } catch (e) {}
+          if (pill) pill.className = 'hisense-ai-status-pill';
+          if (statusText) statusText.textContent = 'Connected & Live';
+          if (launcherDot) launcherDot.className = 'hisense-ai-launcher-status-dot';
+          const isSalesDashboard = (currentDashboard || detectDashboardType()) === 'sales';
+          const asOf = isSalesDashboard ? (workingData.salesAsOf || '26-Oct-2026') : (workingData.displayAsOf || '27-Oct-2026');
+          const dsEl = document.getElementById('hisenseDatasetStatus');
+          if (dsEl) {
+            dsEl.innerHTML = `📊 Dataset update status: Live as on <b>${asOf}</b>`;
+          }
+        } else {
+          isConnected = false;
+          try { sessionStorage.removeItem('hisense_ai_connected'); } catch (e) {}
+          if (pill) pill.className = 'hisense-ai-status-pill is-warning';
+          if (statusText) statusText.textContent = 'Key Missing';
+          if (launcherDot) launcherDot.className = 'hisense-ai-launcher-status-dot offline';
+          if (pill) pill.title = 'Backend online but GEMINI_API_KEY is not set. Add to .env or Vercel Settings. Click to re-check.';
         }
       } else {
         isConnected = false;
-        pill.className = 'hisense-ai-status-pill is-error';
-        statusText.textContent = data.apiKeyConfigured === false ? 'Key Missing' : 'Not Connected';
-        launcherDot.className = 'hisense-ai-launcher-status-dot offline';
-        pill.title = 'Backend online but GEMINI_API_KEY is missing on server (.env). Click to re-check.';
+        try { sessionStorage.removeItem('hisense_ai_connected'); } catch (e) {}
+        if (pill) pill.className = 'hisense-ai-status-pill is-error';
+        if (statusText) statusText.textContent = 'Not Connected';
+        if (launcherDot) launcherDot.className = 'hisense-ai-launcher-status-dot offline';
+        if (pill) pill.title = 'Unable to reach backend /api/chat. Click to retry.';
       }
     } catch (err) {
+      console.error('[AI Copilot] checkHealth error:', err);
       isConnected = false;
-      pill.className = 'hisense-ai-status-pill is-error';
-      statusText.textContent = 'Not Connected';
-      launcherDot.className = 'hisense-ai-launcher-status-dot offline';
-      pill.title = 'Unable to reach /api/chat. Ensure server is running. Click to re-check.';
+      try { sessionStorage.removeItem('hisense_ai_connected'); } catch (e) {}
+      if (pill) pill.className = 'hisense-ai-status-pill is-error';
+      if (statusText) statusText.textContent = 'Not Connected';
+      if (launcherDot) launcherDot.className = 'hisense-ai-launcher-status-dot offline';
+      if (pill) pill.title = 'Unable to reach backend. Click to retry.';
     } finally {
       isCheckingHealth = false;
     }
@@ -574,11 +646,25 @@
     };
 
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: jsonSafeStringify(payload)
-      });
+      let res;
+      try {
+        res = await fetch(resolvedApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: jsonSafeStringify(payload)
+        });
+      } catch (netErr) {
+        if (resolvedApiUrl !== 'https://hisense-dashboards.vercel.app/api/chat') {
+          resolvedApiUrl = 'https://hisense-dashboards.vercel.app/api/chat';
+          res = await fetch(resolvedApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: jsonSafeStringify(payload)
+          });
+        } else {
+          throw netErr;
+        }
+      }
 
       removeTypingIndicator();
       const data = await res.json();
@@ -593,12 +679,13 @@
         conversationHistory.push({ role: 'model', text: reply });
         // Mark status as live
         isConnected = true;
+        try { sessionStorage.setItem('hisense_ai_connected', 'true'); } catch (e) {}
         const pill = document.getElementById('hisenseStatusPill');
         const statusText = document.getElementById('hisenseStatusText');
         const launcherDot = document.getElementById('hisenseLauncherDot');
-        pill.className = 'hisense-ai-status-pill';
-        statusText.textContent = 'Connected & Live';
-        launcherDot.className = 'hisense-ai-launcher-status-dot';
+        if (pill) pill.className = 'hisense-ai-status-pill';
+        if (statusText) statusText.textContent = 'Connected & Live';
+        if (launcherDot) launcherDot.className = 'hisense-ai-launcher-status-dot';
       }
     } catch (err) {
       removeTypingIndicator();

@@ -40,12 +40,18 @@ class LocalDevHandler(SimpleHTTPRequestHandler):
         # Route /api/chat health check
         clean_path = self.path.split("?")[0]
         if clean_path == "/api/chat":
-            api_key = get_gemini_api_key()
-            status_data = get_status_dict(api_key)
+            import importlib
+            import api.chat
+            importlib.reload(api.chat)
+            api_key = api.chat.get_gemini_api_key()
+            status_data = api.chat.get_status_dict(api_key)
+            resp_bytes = json.dumps(status_data).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(resp_bytes)))
             self.end_headers()
-            self.wfile.write(json.dumps(status_data).encode("utf-8"))
+            self.wfile.write(resp_bytes)
+            self.wfile.flush()
             return
 
         # Default static file handling
@@ -54,29 +60,41 @@ class LocalDevHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         clean_path = self.path.split("?")[0]
         if clean_path == "/api/chat":
-            api_key = get_gemini_api_key()
+            import importlib
+            import api.chat
+            importlib.reload(api.chat)
+            api_key = api.chat.get_gemini_api_key()
             try:
                 content_length = int(self.headers.get("Content-Length", 0))
                 body_bytes = self.rfile.read(content_length)
                 body = json.loads(body_bytes.decode("utf-8"))
             except Exception as e:
+                err_bytes = json.dumps({"error": f"Invalid JSON: {str(e)}"}).encode("utf-8")
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(err_bytes)))
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": f"Invalid JSON: {str(e)}"}).encode("utf-8"))
+                self.wfile.write(err_bytes)
+                self.wfile.flush()
                 return
 
-            status_code, result = process_chat_query(body, api_key)
+            status_code, result = api.chat.process_chat_query(body, api_key)
+            resp_bytes = json.dumps(result).encode("utf-8")
             self.send_response(status_code)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(resp_bytes)))
             self.end_headers()
-            self.wfile.write(json.dumps(result).encode("utf-8"))
+            self.wfile.write(resp_bytes)
+            self.wfile.flush()
             return
 
+        err_bytes = json.dumps({"error": "Not Found"}).encode("utf-8")
         self.send_response(404)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(err_bytes)))
         self.end_headers()
-        self.wfile.write(json.dumps({"error": "Not Found"}).encode("utf-8"))
+        self.wfile.write(err_bytes)
+        self.wfile.flush()
 
 
 class DualStackServer(HTTPServer):

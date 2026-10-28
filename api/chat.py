@@ -40,12 +40,29 @@ def find_project_root():
     return cur
 
 
+def resolve_data_file(filename):
+    """Find a dataset JSON file across all possible deployment and serverless structures."""
+    candidates = [
+        os.path.join(find_project_root(), filename),
+        os.path.join(os.getcwd(), filename),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), filename),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", filename),
+        os.path.join("/var/task", filename),
+        os.path.join("/var/task/api", filename),
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return candidates[0]
+
+
 def get_gemini_api_key():
     """Resolve Gemini API key from environment or .env file."""
     # 1. First check actual process environment (standard for Vercel / Cloud hosting)
-    key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if key and key != "your_gemini_api_key_here":
-        return key
+    for env_var in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY"]:
+        key = os.environ.get(env_var, "").strip()
+        if key and key != "your_gemini_api_key_here":
+            return key
 
     root = find_project_root()
     # 2. Check local .env files
@@ -58,7 +75,8 @@ def get_gemini_api_key():
                         line = line.strip()
                         if line and not line.startswith("#") and "=" in line:
                             k, v = line.split("=", 1)
-                            if k.strip() == "GEMINI_API_KEY":
+                            clean_k = k.strip()
+                            if clean_k in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY"):
                                 file_key = v.strip().strip("'\"")
                                 if file_key and file_key != "your_gemini_api_key_here":
                                     return file_key
@@ -74,12 +92,12 @@ def get_gemini_api_key():
 
 def get_sales_dataset():
     """Pre-load and cache Sales dataset with file modification timestamp checking."""
-    root = find_project_root()
-    sales_path = os.path.join(root, "data_sales.json")
+    sales_path = resolve_data_file("data_sales.json")
+    root = os.path.dirname(sales_path) if os.path.exists(sales_path) else find_project_root()
     
     # Fallback to extracting from index.html if data_sales.json is missing
     if not os.path.exists(sales_path):
-        index_path = os.path.join(root, "index.html")
+        index_path = resolve_data_file("index.html")
         if os.path.exists(index_path):
             try:
                 import re
@@ -322,12 +340,12 @@ def build_sales_pipe_table(sales):
 
 def get_display_comparison_dataset():
     """Pre-load and cache Display Comparison dataset with mtime checking."""
-    root = find_project_root()
-    dc_path = os.path.join(root, "data_display_comparison.json")
+    dc_path = resolve_data_file("data_display_comparison.json")
+    root = os.path.dirname(dc_path) if os.path.exists(dc_path) else find_project_root()
 
     # Fallback extraction from display_comparison.html if missing
     if not os.path.exists(dc_path):
-        dc_html = os.path.join(root, "display_comparison.html")
+        dc_html = resolve_data_file("display_comparison.html")
         if os.path.exists(dc_html):
             try:
                 import re
@@ -808,34 +826,55 @@ def get_status_dict(api_key):
 class handler(BaseHTTPRequestHandler):
     """Vercel Python serverless HTTP request handler."""
 
-    def _set_headers(self, status=200):
+    def _set_headers(self, status=200, length=None):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        if length is not None:
+            self.send_header("Content-Length", str(length))
         self.end_headers()
 
     def do_OPTIONS(self):
-        self._set_headers(200)
+        self._set_headers(200, 0)
 
     def do_GET(self):
-        api_key = get_gemini_api_key()
-        status_payload = get_status_dict(api_key)
-        self._set_headers(200)
-        self.wfile.write(json.dumps(status_payload).encode("utf-8"))
+        try:
+            api_key = get_gemini_api_key()
+            status_payload = get_status_dict(api_key)
+            resp_bytes = json.dumps(status_payload).encode("utf-8")
+            self._set_headers(200, len(resp_bytes))
+            self.wfile.write(resp_bytes)
+            self.wfile.flush()
+        except Exception as e:
+            err_bytes = json.dumps({"error": f"Server Error: {str(e)}", "status": "error"}).encode("utf-8")
+            self._set_headers(500, len(err_bytes))
+            self.wfile.write(err_bytes)
+            self.wfile.flush()
 
     def do_POST(self):
-        api_key = get_gemini_api_key()
         try:
+            api_key = get_gemini_api_key()
             content_length = int(self.headers.get("Content-Length", 0))
             body_bytes = self.rfile.read(content_length)
             body = json.loads(body_bytes.decode("utf-8"))
         except Exception as e:
-            self._set_headers(400)
-            self.wfile.write(json.dumps({"error": f"Invalid JSON payload: {str(e)}"}).encode("utf-8"))
+            err_bytes = json.dumps({"error": f"Invalid JSON payload: {str(e)}"}).encode("utf-8")
+            self._set_headers(400, len(err_bytes))
+            self.wfile.write(err_bytes)
+            self.wfile.flush()
             return
 
-        status_code, result = process_chat_query(body, api_key)
-        self._set_headers(status_code)
-        self.wfile.write(json.dumps(result).encode("utf-8"))
+        try:
+            status_code, result = process_chat_query(body, api_key)
+            resp_bytes = json.dumps(result).encode("utf-8")
+            self._set_headers(status_code, len(resp_bytes))
+            self.wfile.write(resp_bytes)
+            self.wfile.flush()
+        except Exception as e:
+            err_bytes = json.dumps({"error": f"Internal execution error: {str(e)}"}).encode("utf-8")
+            self._set_headers(500, len(err_bytes))
+            self.wfile.write(err_bytes)
+            self.wfile.flush()

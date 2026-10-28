@@ -237,6 +237,28 @@
   transform: scale(1.03);
 }
 
+.hisense-ai-status-pill.is-checking {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.hisense-ai-status-pill.is-checking:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.hisense-ai-status-pill.is-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.hisense-ai-status-pill.is-warning:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
 .hisense-ai-status-pill.is-error {
   background: rgba(239, 68, 68, 0.12);
   color: #f87171;
@@ -255,6 +277,18 @@
   background: #34d399;
   box-shadow: 0 0 6px #34d399;
   animation: hisenseGlow 1.8s ease-in-out infinite;
+}
+
+.hisense-ai-status-pill.is-checking .hisense-ai-status-dot-pulse {
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+  animation: hisenseGlow 1.2s ease-in-out infinite;
+}
+
+.hisense-ai-status-pill.is-warning .hisense-ai-status-dot-pulse {
+  background: #fbbf24;
+  box-shadow: 0 0 6px #fbbf24;
+  animation: none;
 }
 
 .hisense-ai-status-pill.is-error .hisense-ai-status-dot-pulse {
