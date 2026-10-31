@@ -924,6 +924,7 @@ function renderAll() {
   document.getElementById('baselineCount').textContent = fmt(list.filter(o => o.s.d2Date).length);
   document.getElementById('newCount').textContent = fmt(list.filter(o => !o.s.d2Date).length);
   document.getElementById('maxDateLabel').textContent = prettyDate(MAX_DATE);
+  window.MAX_DATE = MAX_DATE;
 
   const k = renderKPIs(c);
 

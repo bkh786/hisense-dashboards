@@ -94,6 +94,57 @@
   }
 
   // =========================================================================
+  // LIVE DATASET DATE RESOLUTION
+  // =========================================================================
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function formatPrettyDate(iso) {
+    if (!iso) return '';
+    const parts = String(iso).trim().split('-');
+    if (parts.length === 3) {
+      const y = parts[0];
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      if (m >= 1 && m <= 12) {
+        return `${d} ${MONTHS[m - 1]} ${y}`;
+      }
+    }
+    return String(iso);
+  }
+
+  function getPageDatasetDate() {
+    // 1. Direct text in #maxDateLabel (populated by display_comparison.html or index.html)
+    const label = document.getElementById('maxDateLabel');
+    if (label && label.textContent) {
+      const text = label.textContent.trim();
+      if (text && text !== '–' && text !== '-' && text !== '—') {
+        return text;
+      }
+    }
+
+    // 2. window.MAX_DATE
+    if (window.MAX_DATE && typeof window.MAX_DATE === 'string') {
+      return formatPrettyDate(window.MAX_DATE);
+    }
+
+    // 3. window.RECORDS (index.html)
+    if (window.RECORDS && Array.isArray(window.RECORDS) && window.RECORDS.length > 0) {
+      try {
+        let mx = '';
+        const len = Math.min(window.RECORDS.length, 5000);
+        for (let i = 0; i < len; i++) {
+          const d = window.RECORDS[i].saleDate || window.RECORDS[i].subDate;
+          if (d && d > mx) mx = d;
+        }
+        if (mx) return formatPrettyDate(mx);
+      } catch (e) {}
+    }
+
+    return null;
+  }
+
+
+  // =========================================================================
   // DOM INJECTION & TEMPLATE
   // =========================================================================
   function injectWidget() {
@@ -202,7 +253,7 @@
             👋 <b>Welcome to Hisense AI Copilot!</b><br>
             I have the entire <b>${isSales ? 'Sales Performance' : 'Display Comparison (D-1 vs D-2)'}</b> dataset pre-loaded in working memory.
             <div class="hisense-ai-dataset-status" id="hisenseDatasetStatus">
-              📊 Dataset update status: Live as on <b>${isSales ? '26-Oct-2026' : '27-Oct-2026'}</b>
+              📊 Dataset update status: Live as on <b>${getPageDatasetDate() || (isSales ? '29 Oct 2026' : '30 Oct 2026')}</b>
             </div>
             <ul>
               <li><b>Zero Lag:</b> Instant analysis without external database queries.</li>
@@ -269,6 +320,17 @@
         setTimeout(() => input.focus(), 150);
       }
     });
+
+    // Observe maxDateLabel updates on page to synchronize dataset date
+    const maxDateEl = document.getElementById('maxDateLabel');
+    if (maxDateEl && window.MutationObserver) {
+      try {
+        const observer = new MutationObserver(() => {
+          syncFilters();
+        });
+        observer.observe(maxDateEl, { childList: true, characterData: true, subtree: true });
+      } catch (e) {}
+    }
 
     // Auto-reconnect interval when disconnected
     setInterval(() => {
@@ -428,7 +490,8 @@
           if (statusText) statusText.textContent = 'Connected & Live';
           if (launcherDot) launcherDot.className = 'hisense-ai-launcher-status-dot';
           const isSalesDashboard = (currentDashboard || detectDashboardType()) === 'sales';
-          const asOf = isSalesDashboard ? (workingData.salesAsOf || '26-Oct-2026') : (workingData.displayAsOf || '27-Oct-2026');
+          const backendAsOf = isSalesDashboard ? (workingData.salesPretty || workingData.salesAsOf) : (workingData.displayPretty || workingData.displayAsOf);
+          const asOf = getPageDatasetDate() || backendAsOf || (isSalesDashboard ? '29 Oct 2026' : '30 Oct 2026');
           const dsEl = document.getElementById('hisenseDatasetStatus');
           if (dsEl) {
             dsEl.innerHTML = `📊 Dataset update status: Live as on <b>${asOf}</b>`;
@@ -470,6 +533,13 @@
     const contextText = document.getElementById('hisenseContextText');
     if (contextText) {
       contextText.textContent = getActiveFilterSummaryText(cachedActiveFilters);
+    }
+    const pageDate = getPageDatasetDate();
+    if (pageDate) {
+      const dsEl = document.getElementById('hisenseDatasetStatus');
+      if (dsEl) {
+        dsEl.innerHTML = `📊 Dataset update status: Live as on <b>${pageDate}</b>`;
+      }
     }
   }
 
@@ -638,11 +708,13 @@
 
     // Prepare payload
     syncFilters();
+    const activeDate = getPageDatasetDate();
     const payload = {
       prompt: prompt,
       history: conversationHistory.slice(-8),
       activeFilters: cachedActiveFilters,
-      dashboard: currentDashboard
+      dashboard: currentDashboard,
+      pageDate: activeDate
     };
 
     try {

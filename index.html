@@ -96,6 +96,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     </div>
 
     <div class="topbar-right">
+      <span class="date-pill" title="Latest submitted date in the dataset">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Data updated up to <b id="maxDateLabel">29 Oct 2026</b>
+      </span>
       <a href="https://teamchannelplay-my.sharepoint.com/:x:/g/personal/bikash_roy1_channelplay_in/IQDIM4tVlfGcTLbyu1n2U5CLAeGCmfDd_y9NZI3XkM1pr8w?e=rN1XpF&download=1" target="_blank" rel="noopener noreferrer" class="download-report-btn" id="downloadReportBtn" title="Download Full Report">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align: middle;">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1563,6 +1567,7 @@ async function fetchLiveData(force = false) {
     });
     if (newRecords.length > 0) {
       RECORDS = newRecords;
+      syncMaxDateHeader();
       refreshRoleSets();
       initFilterDefaults(true);
       buildFilterUI();
@@ -1589,11 +1594,35 @@ document.getElementById('uploadBtn').addEventListener('click', () => fetchLiveDa
 /* =========================================================================
    INIT & AUTO REFRESH HANDLERS
    ========================================================================= */
+const prettyDate = iso => {
+  if (!iso) return '–';
+  const parts = String(iso).split('-');
+  if (parts.length === 3) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${+parts[2]} ${months[+parts[1] - 1]} ${parts[0]}`;
+  }
+  return iso;
+};
+
+function syncMaxDateHeader() {
+  let mx = null;
+  (RECORDS || []).forEach(r => {
+    const d = r.saleDate || r.subDate;
+    if (d && (!mx || d > mx)) mx = d;
+  });
+  if (mx) {
+    window.MAX_DATE = mx;
+    const label = document.getElementById('maxDateLabel');
+    if (label) label.textContent = prettyDate(mx);
+  }
+}
+
 refreshRoleSets();
 initFilterDefaults();
 buildFilterUI();
 initCharts();
 renderAll();
+syncMaxDateHeader();
 
 // Auto fetch on load
 if (document.readyState === 'loading') {

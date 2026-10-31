@@ -30,6 +30,41 @@ _MODEL_CACHE = {
     "models": []
 }
 
+MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+
+def format_iso_date(iso_str, default="Latest"):
+    """Format an ISO date string like '2026-10-30' as '30-Oct-2026'."""
+    if not iso_str:
+        return default
+    try:
+        parts = str(iso_str).strip().split("-")
+        if len(parts) == 3:
+            y, m, d = parts
+            m_idx = int(m) - 1
+            if 0 <= m_idx < 12:
+                return f"{int(d):02d}-{MONTH_NAMES[m_idx]}-{y}"
+    except Exception:
+        pass
+    return str(iso_str)
+
+
+def format_pretty_date(iso_str, default="Latest"):
+    """Format an ISO date string like '2026-10-30' as '30 Oct 2026'."""
+    if not iso_str:
+        return default
+    try:
+        parts = str(iso_str).strip().split("-")
+        if len(parts) == 3:
+            y, m, d = parts
+            m_idx = int(m) - 1
+            if 0 <= m_idx < 12:
+                return f"{int(d)} {MONTH_NAMES[m_idx]} {y}"
+    except Exception:
+        pass
+    return str(iso_str)
+
+
 
 def find_project_root():
     """Locate the Hisense Dashboard root directory."""
@@ -158,8 +193,9 @@ def build_sales_pipe_table(sales):
     total_units = sum(r.get("qty", 0) for r in sales_logged)
 
     # Detect max date
-    sale_dates = [r.get("saleDate") for r in sales_logged if r.get("saleDate")]
-    max_date = max(sale_dates) if sale_dates else "2026-10-26"
+    sale_dates = [r.get("saleDate") or r.get("subDate") for r in sales if (r.get("saleDate") or r.get("subDate"))]
+    max_date = max(sale_dates) if sale_dates else "2026-10-29"
+    sales_as_of = format_iso_date(max_date)
 
     # Unique promoters
     promoters_map = {}
@@ -192,7 +228,7 @@ def build_sales_pipe_table(sales):
 
     lines = []
     lines.append("### SALES PERFORMANCE MASTER METRICS (LIVE AUTHORITATIVE DATASET):")
-    lines.append(f"- Authoritative Dataset Recency: Live as on 26-Oct-2026 (Max Sale Date: {max_date})")
+    lines.append(f"- Authoritative Dataset Recency: Live as on {sales_as_of} (Max Logged Date: {max_date})")
     lines.append(f"- Total Logged Submissions: {total_records:,} | Total Sales Logged: {len(sales_logged):,} | Total Units Sold: {total_units:,.0f} | Total Sales Value: ₹{total_sales_value:,.0f}")
     lines.append(f"- Active Promoter Pool: {total_promoters} | Promoters with Sales: {len(active_promoters)} | Zero Sales Promoters: {len(zero_sales_promoters)}")
     lines.append(f"- Overall Program Expected ROI: {overall_roi}x (Total Sales Value ÷ Total Promoter CTC @ ₹34k avg monthly CTC)")
@@ -488,11 +524,19 @@ def build_display_comparison_pipe_table(dc_data):
     avg_d1 = round(total_d1 / with_d1, 2) if with_d1 > 0 else 0
     avg_d2 = round(total_d2 / with_d2, 2) if with_d2 > 0 else 0
 
+    max_date = dc_data.get("maxDate")
+    if not max_date and dc_data.get("records"):
+        dc_dates = [r.get("date") for r in dc_data["records"] if r.get("date")]
+        max_date = max(dc_dates) if dc_dates else "2026-10-30"
+    if not max_date:
+        max_date = "2026-10-30"
+    display_as_of = format_iso_date(max_date)
+
     lines = []
     lines.append("### HISENSE DISPLAY COMPARISON MASTER METRICS (D-1 vs D-2):")
-    lines.append(f"- Authoritative Dataset Recency: Live as on 27-Oct-2026 (Max Audit Date: {dc_data.get('maxDate', '2026-10-27')})")
+    lines.append(f"- Authoritative Dataset Recency: Live as on {display_as_of} (Max Audit Date: {max_date})")
     lines.append(f"- Benchmark Definition: D-1 is the Latest Audit Visit per outlet; D-2 is the Previous Audit Visit.")
-    lines.append(f"- Total Monitored Outlets: {len(outlets):,} | Latest Data Date: {dc_data.get('maxDate', '2026-10-27')}")
+    lines.append(f"- Total Monitored Outlets: {len(outlets):,} | Latest Data Date: {display_as_of} ({max_date})")
     lines.append(f"- Current D-1 Displays: {total_d1:,} Units | Previous D-2 Displays: {total_d2:,} Units")
     lines.append(f"- Net Change vs D-2: {'▲ +' if total_diff >= 0 else '▼ '}{total_diff:,} Units ({pct_change:+0.1f}%)")
     lines.append(f"- Outlets with Display: D-1 has {with_d1:,} ({round(with_d1/len(outlets)*100)}%) vs D-2 {with_d2:,}")
@@ -568,25 +612,57 @@ def build_display_comparison_pipe_table(dc_data):
     return "\n".join(lines)
 
 
+def get_dataset_recency():
+    """Dynamically determine maximum dates from loaded datasets without hardcoding."""
+    sales, _ = get_sales_dataset()
+    sale_dates = [r.get("saleDate") or r.get("subDate") for r in sales if (r.get("saleDate") or r.get("subDate"))]
+    sales_max = max(sale_dates) if sale_dates else "2026-10-29"
+    sales_as_of = format_iso_date(sales_max)
+    sales_pretty = format_pretty_date(sales_max)
+
+    dc_data, _ = get_display_comparison_dataset()
+    dc_max = dc_data.get("maxDate")
+    if not dc_max and dc_data.get("records"):
+        dc_dates = [r.get("date") for r in dc_data["records"] if r.get("date")]
+        dc_max = max(dc_dates) if dc_dates else "2026-10-30"
+    if not dc_max:
+        dc_max = "2026-10-30"
+    display_as_of = format_iso_date(dc_max)
+    display_pretty = format_pretty_date(dc_max)
+
+    return {
+        "sales_max": sales_max,
+        "sales_as_of": sales_as_of,
+        "sales_pretty": sales_pretty,
+        "display_max": dc_max,
+        "display_as_of": display_as_of,
+        "display_pretty": display_pretty,
+    }
+
+
 # =========================================================================
 # SYSTEM INSTRUCTION BUILDER
 # =========================================================================
 
-def build_system_instruction(dashboard_type="sales", active_filters=None):
-    """Construct complete pre-warmed prompt context with active filter awareness."""
+def build_system_instruction(dashboard_type="sales", active_filters=None, page_date=None):
+    """Construct complete pre-warmed prompt context with active filter and live screen date awareness."""
     parts = []
-    
+    recency = get_dataset_recency()
+
+    is_display = dashboard_type in ("display_comparison", "display", "comparison")
+    active_date_label = page_date or (recency["display_pretty"] if is_display else recency["sales_pretty"])
+
     parts.append(
         "You are the Hisense AI Copilot, an ultra-premium data-aware analytical assistant "
         "for the Hisense India Field Operations & Sales Program (operated in partnership with Channelplay).\n"
         "Your role is to assist national leaders, Regional Sales Managers (RSMs), Branch Managers (BMs), "
         "Team Leaders (TLs), and promoters by answering queries instantly from your pre-loaded memory.\n\n"
-        "### 🕒 CRITICAL DATA RECENCY & TIME CONTEXT:\n"
-        "- Current Date: 27-Oct-2026.\n"
-        "- The Sales Performance dataset is live and authoritative as on 26-Oct-2026.\n"
-        "- The Display Comparison dataset is live and authoritative as on 27-Oct-2026.\n"
-        "- DO NOT reference or state that data is from 17-Oct-2026. The 17-Oct date was a legacy benchmark.\n"
-        "- Always state that data is live and current as on 26-Oct-2026 (Sales) or 27-Oct-2026 (Displays).\n\n"
+        f"### 🕒 REAL-TIME DATASET RECENCY & SCREEN SYNCHRONIZATION:\n"
+        f"- The active dashboard on the user's screen indicates 'Data updated up to': {active_date_label}.\n"
+        f"- The Sales Performance dataset is live and authoritative as on {recency['sales_as_of']} (Max record date: {recency['sales_max']}).\n"
+        f"- The Display Comparison dataset is live and authoritative as on {recency['display_as_of']} (Max audit date: {recency['display_max']}).\n"
+        "- Under NO circumstances claim that data is outdated, cached, or from an obsolete historical date (such as 17-Oct-2026, 26-Oct-2026, or 27-Oct-2026).\n"
+        f"- When answering questions about dataset recency or update status, ALWAYS state that data is live, current, and updated up to {active_date_label} ({recency['display_as_of']} for Displays, {recency['sales_as_of']} for Sales).\n\n"
         "### CORE ARCHITECTURAL INSTRUCTIONS:\n"
         "1. PRE-LOADED DATASET: The complete, authoritative Hisense dataset is provided below in compact pipe tables. "
         "Answer questions directly from this pre-loaded memory without speculating or mentioning external databases.\n"
@@ -722,8 +798,9 @@ def process_chat_query(body, api_key):
     dashboard_type = body.get("dashboard", "sales").lower()
     active_filters = body.get("activeFilters", {})
     history = body.get("history", [])
+    page_date = body.get("pageDate") or body.get("maxDateLabel") or body.get("pageDatasetDate")
 
-    system_instruction_text = build_system_instruction(dashboard_type, active_filters)
+    system_instruction_text = build_system_instruction(dashboard_type, active_filters, page_date=page_date)
 
     contents = []
     # Include up to last 8 turns of conversation history for conversational context
@@ -807,15 +884,20 @@ def process_chat_query(body, api_key):
 
 
 def get_status_dict(api_key):
-    """Return backend health check status payload with latest dataset update dates."""
+    """Return backend health check status payload with dynamic dataset update dates."""
     has_key = bool(api_key and len(api_key) > 5)
+    recency = get_dataset_recency()
     return {
         "status": "online",
         "assistant": "Hisense AI Copilot",
         "apiKeyConfigured": has_key,
-        "salesAsOf": "26-Oct-2026",
-        "displayAsOf": "27-Oct-2026",
-        "latestDate": "26-Oct-2026"
+        "salesAsOf": recency["sales_as_of"],
+        "displayAsOf": recency["display_as_of"],
+        "salesPretty": recency["sales_pretty"],
+        "displayPretty": recency["display_pretty"],
+        "salesMaxDate": recency["sales_max"],
+        "displayMaxDate": recency["display_max"],
+        "latestDate": max(recency["sales_as_of"], recency["display_as_of"])
     }
 
 

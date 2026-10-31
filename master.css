@@ -506,3 +506,22 @@ footer .brand-line img{height:14px;opacity:.6;}
   .date-field{grid-column:1 / -1;}
   .section-title{font-size:16px;}
 }
+
+/* Topbar Date Pill */
+.date-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #EAF6F3;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.date-pill b {
+  color: #6FE3B4;
+  font-weight: 800;
+}
