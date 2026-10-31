@@ -344,7 +344,24 @@ def build_sales_pipe_table(sales):
         lines.append(f"#{idx}|{sku}|{d['cat']}|₹{d['val']:,.0f}|{d['units']:,.0f}")
     lines.append("")
 
-    # 7. Top 25 Promoters
+    # 7. Top 15 Stores by Sales Value
+    by_store = {}
+    for r in sales_logged:
+        st_name = r.get("store") or "Unknown"
+        zn = r.get("zone", "")
+        key = f"{st_name} ({zn})"
+        if key not in by_store:
+            by_store[key] = {"val": 0, "units": 0}
+        by_store[key]["val"] += r.get("value", 0)
+        by_store[key]["units"] += r.get("qty", 0)
+
+    lines.append("### TOP 15 STORES BY SALES VALUE:")
+    lines.append("Rank|Store Name (Zone)|Sales Value (₹)|Units Sold")
+    for idx, (st_name, d) in enumerate(sorted(by_store.items(), key=lambda x: -x[1]["val"])[:15], 1):
+        lines.append(f"#{idx}|{st_name}|₹{d['val']:,.0f}|{d['units']:,.0f}")
+    lines.append("")
+
+    # 8. Top 25 Promoters
     lines.append("### TOP 25 PROMOTERS BY SALES VALUE:")
     lines.append("Rank|Promoter|Store|TL|Zone|State|Units|Sales Value (₹)|ROI")
     sorted_promoters = sorted(active_promoters, key=lambda x: -x["sales_value"])
@@ -353,14 +370,14 @@ def build_sales_pipe_table(sales):
         lines.append(f"#{idx}|{p['name']}|{p['store']}|{p['tl']}|{p['zone']}|{p['state']}|{p['units']:,.0f}|₹{p['sales_value']:,.0f}|{p_roi}x")
     lines.append("")
 
-    # 8. Promoters with Zero Sales
+    # 9. Promoters with Zero Sales
     lines.append(f"### PROMOTERS WITH ZERO SALES ({len(zero_sales_promoters)} Promoters Need Attention):")
     lines.append("Promoter|Store / Partner|Team Leader|Zone|State")
     for p in zero_sales_promoters[:30]:
         lines.append(f"{p['name']}|{p['store']}|{p['tl']}|{p['zone']}|{p['state']}")
     lines.append("")
 
-    # 9. Recent Sales Transactions Sample (Most recent 60 transactions)
+    # 10. Recent Sales Transactions Sample (Most recent 60 transactions)
     recent_sales = sorted(sales_logged, key=lambda x: str(x.get("saleDate") or ""), reverse=True)[:60]
     lines.append(f"### RECENT SALES TRANSACTIONS SAMPLE (LATEST AS OF {max_date}):")
     lines.append("ID|Date|Promoter|Store|Zone|State|TL|Channel|Category|Tech|Qty|Value")
@@ -590,6 +607,26 @@ def build_display_comparison_pipe_table(dc_data):
         lines.append(f"{p}|{d['d1']}|{d['d2']}|{_diff_str(diff)}|{pct:+.1f}%")
     lines.append("")
 
+    # Top 15 Outlets by D-1 Display Volume
+    lines.append("### TOP 15 OUTLETS WITH HIGHEST D-1 DISPLAY VOLUME:")
+    lines.append("Store Name|Code|State|Region|TL|BM|D-1 Displays|D-2 Displays|Net Change")
+    sorted_d1 = sorted(outlets.values(), key=lambda x: -x["d1"])
+    for o in sorted_d1[:15]:
+        s = o["s"]
+        diff = o["d1"] - o["d2"]
+        lines.append(f"{s['name']}|{s['code']}|{s['state']}|{s['region']}|{s['tl']}|{s['bm']}|{o['d1']}|{o['d2']}|{_diff_str(diff)}")
+    lines.append("")
+
+    # Top 15 Outlets by D-2 Display Volume
+    lines.append("### TOP 15 OUTLETS WITH HIGHEST D-2 DISPLAY VOLUME:")
+    lines.append("Store Name|Code|State|Region|TL|BM|D-1 Displays|D-2 Displays|Net Change")
+    sorted_d2 = sorted(outlets.values(), key=lambda x: -x["d2"])
+    for o in sorted_d2[:15]:
+        s = o["s"]
+        diff = o["d1"] - o["d2"]
+        lines.append(f"{s['name']}|{s['code']}|{s['state']}|{s['region']}|{s['tl']}|{s['bm']}|{o['d1']}|{o['d2']}|{_diff_str(diff)}")
+    lines.append("")
+
     # Top 15 Dropping Outlets (Attention Required)
     lines.append("### TOP 15 OUTLETS WITH BIGGEST DISPLAY DROP (ATTENTION REQUIRED):")
     lines.append("Store Name|Code|State|Region|TL|BM|D-1|D-2|Net Drop")
@@ -656,20 +693,36 @@ def build_system_instruction(dashboard_type="sales", active_filters=None, page_d
         "You are the Hisense AI Copilot, an ultra-premium data-aware analytical assistant "
         "for the Hisense India Field Operations & Sales Program (operated in partnership with Channelplay).\n"
         "Your role is to assist national leaders, Regional Sales Managers (RSMs), Branch Managers (BMs), "
-        "Team Leaders (TLs), and promoters by answering queries instantly from your pre-loaded memory.\n\n"
+        "Team Leaders (TLs), and promoters by providing fast, precise, and executive-ready answers.\n\n"
         f"### 🕒 REAL-TIME DATASET RECENCY & SCREEN SYNCHRONIZATION:\n"
-        f"- The active dashboard on the user's screen indicates 'Data updated up to': {active_date_label}.\n"
+        f"- The active dashboard on user's screen displays data updated up to: {active_date_label}.\n"
         f"- The Sales Performance dataset is live and authoritative as on {recency['sales_as_of']} (Max record date: {recency['sales_max']}).\n"
         f"- The Display Comparison dataset is live and authoritative as on {recency['display_as_of']} (Max audit date: {recency['display_max']}).\n"
         "- Under NO circumstances claim that data is outdated, cached, or from an obsolete historical date (such as 17-Oct-2026, 26-Oct-2026, or 27-Oct-2026).\n"
         f"- When answering questions about dataset recency or update status, ALWAYS state that data is live, current, and updated up to {active_date_label} ({recency['display_as_of']} for Displays, {recency['sales_as_of']} for Sales).\n\n"
-        "### CORE ARCHITECTURAL INSTRUCTIONS:\n"
-        "1. PRE-LOADED DATASET: The complete, authoritative Hisense dataset is provided below in compact pipe tables. "
-        "Answer questions directly from this pre-loaded memory without speculating or mentioning external databases.\n"
-        "2. ACCURACY FIRST: Quote exact metrics, numbers, currency values (₹), percentages, ranks, and names from the tables.\n"
-        "3. ACTIVE SCREEN CONTEXT: When the user applies filters, prioritize their active view while maintaining national context.\n"
-        "4. ULTRA-PREMIUM FORMATTING: Use bold key figures, clean bulleted lists, and Markdown tables (| Col 1 | Col 2 |) "
-        "whenever comparing groups, leaders, or categories. Keep responses structured, concise, and executive-ready.\n"
+        "### 🎯 STRICT RESPONSE MODES & PRECISION GUIDELINES:\n"
+        "1. DIRECT QUESTIONS (Factual, Metric, Ranking, Store, Promoter, or Date):\n"
+        "   - Definition: The user asks for a specific number, name, outlet, promoter, rank, date, or direct comparison "
+        "     (e.g., 'nationally which outlet recorded the highest display on d-1 and d-2?', 'who is the top promoter?', 'what is total sales value?').\n"
+        "   - Mandatory Behavior:\n"
+        "     * Answer IMMEDIATELY and DIRECTLY in the very first sentence.\n"
+        "     * Provide ONLY the exact requested metrics/names with minimal essential context (e.g., store name, code, state, and units/values).\n"
+        "     * DO NOT add introductory filler or preambles (NEVER say 'Based on the authoritative dataset...', 'The dataset tracks 635 outlets across regions...', 'To provide you with the absolute exact single store...').\n"
+        "     * DO NOT provide unsolicited suggestions, background narratives, or lectures on direct questions.\n"
+        "     * Keep the response strictly focused, concise, and token-efficient (typically 1 to 3 short sentences or a clean mini-table).\n\n"
+        "2. NON-DIRECT / STRATEGIC QUESTIONS (Open-ended, Diagnostic, or Advisory):\n"
+        "   - Definition: The user asks broad, exploratory, diagnostic, or advisory questions "
+        "     (e.g., 'how can we improve AC sales?', 'why are displays dropping in South?', 'what should the BM focus on?', 'give an overview of promoter health').\n"
+        "   - Mandatory Behavior:\n"
+        "     * First provide a concise diagnostic summary of the data.\n"
+        "     * Then provide a structured section: '### 💡 Strategic Suggestions & Next Steps' with 2-4 concrete, actionable, data-backed recommendations.\n\n"
+        "3. STRICT PROHIBITION ON META-EXPLANATIONS:\n"
+        "   - NEVER explain how the dataset is provided, structured, or pre-loaded in your prompt.\n"
+        "   - NEVER say phrases like 'from the pre-loaded records', 'the pipe tables contain', 'the master dataset pre-loads highlighted lists', or 'the full granular line-by-line listing is compiled'.\n"
+        "   - Speak with authoritative, senior executive clarity as if you directly observe the live operational database.\n\n"
+        "4. ACCURACY FIRST & CLEAN FORMATTING:\n"
+        "   - Quote exact metrics, numbers, currency values (₹), percentages, ranks, and names from the tables below.\n"
+        "   - Use bold for key figures and Markdown tables (| Col 1 | Col 2 |) when comparing multiple entities.\n"
     )
 
     # Active Filters Banner
@@ -824,8 +877,8 @@ def process_chat_query(body, api_key):
         },
         "contents": contents,
         "generationConfig": {
-            "temperature": 0.2,
-            "maxOutputTokens": 2048,
+            "temperature": 0.15,
+            "maxOutputTokens": 1024,
         }
     }
 
