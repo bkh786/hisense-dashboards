@@ -144,17 +144,13 @@ td.bar .v{position:relative;font-weight:700;}
         <span class="nav-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
         <span class="nav-tab-title">Sales</span>
       </a>
-      <a href="display.html" class="nav-browser-tab" id="tab-display" title="Display Availability">
-        <span class="nav-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
-        <span class="nav-tab-title">Display Availability</span>
-      </a>
       <a href="display_comparison.html" class="nav-browser-tab active" id="tab-display-comparison" title="Display Comparison">
         <span class="nav-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="6" y="10" width="3.2" height="8" rx="0.6"/><rect x="11" y="6" width="3.2" height="12" rx="0.6"/><path d="M17 13l2-2 2 2"/><line x1="19" y1="11" x2="19" y2="18"/></svg></span>
         <span class="nav-tab-title">Display Comparison</span>
       </a>
-      <a href="hiring.html" class="nav-browser-tab" id="tab-hiring" title="Hiring Status">
+      <a href="hiring.html" class="nav-browser-tab" id="tab-hiring" title="Hiring">
         <span class="nav-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-        <span class="nav-tab-title">Hiring Status</span>
+        <span class="nav-tab-title">Hiring</span>
       </a>
       <a href="attendance.html" class="nav-browser-tab" id="tab-attendance" title="Attendance">
         <span class="nav-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg></span>
@@ -201,16 +197,46 @@ td.bar .v{position:relative;font-weight:700;}
   </div>
 </header>
 
-<main class="wrap">
+<!-- FILTER SIDEBAR DRAWER & BACKDROP -->
+<div class="filter-backdrop" id="filterBackdrop"></div>
 
-  <!-- FILTER BAR -->
-  <div class="filterbar" id="filterBar">
-    <div class="filterbar-head">
-      <div class="eyebrow">Filters</div>
-      <div class="result-count"><b id="outletCount">0</b> outlets in view &middot; <b id="baselineCount">0</b> with D-2 baseline &middot; <b id="newCount">0</b> single-visit</div>
+<button type="button" class="filter-toggle-btn" id="filterToggleBtn" aria-expanded="false" title="Show filters">
+  <span class="filter-toggle-icon">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/></svg>
+  </span>
+  <span class="filter-toggle-chevron">&rsaquo;</span>
+  <span class="filter-toggle-text">Filters</span>
+  <span class="filter-toggle-badge" id="filterActiveBadge" style="display:none;">0</span>
+</button>
+
+<aside class="filter-sidebar" id="filterSidebar" aria-label="Filters sidebar">
+  <button type="button" class="filter-sidebar-edge-toggle" id="filterSidebarEdgeToggle" title="Collapse filters">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <div class="filter-sidebar-head">
+    <div class="filter-sidebar-title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      <span>Dashboard Filters</span>
     </div>
-    <div class="filter-grid" id="filterGrid"></div>
+    <button type="button" class="filter-sidebar-close" id="filterSidebarClose" title="Collapse filters (Esc)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </div>
+  <div class="filter-sidebar-info">
+    <div class="result-count"><b id="outletCount">0</b> outlets in view &middot; <b id="baselineCount">0</b> with D-2 baseline &middot; <b id="newCount">0</b> single-visit</div>
+    <button type="button" class="filter-sidebar-reset-btn" id="filterSidebarReset">Reset all</button>
+  </div>
+  <div class="filter-sidebar-body">
+    <div class="filterbar" id="filterBar">
+      <div class="filter-grid" id="filterGrid"></div>
+    </div>
+  </div>
+  <div class="filter-sidebar-foot">
+    <button type="button" class="filter-apply-btn" id="filterSidebarApply">View Results</button>
+  </div>
+</aside>
+
+<main class="wrap">
 
   <!-- DISPLAY SNAPSHOT -->
   <section class="section" id="snapshot">

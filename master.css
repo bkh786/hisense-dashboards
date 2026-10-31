@@ -48,7 +48,7 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 ::selection{background:var(--teal-200);}
-.wrap{max-width:1500px;margin:0 auto;padding:0 28px 64px;}
+.wrap{max-width:1500px;margin:0 auto;padding:20px 28px 64px;}
 h1,h2,h3,.display{font-family:'Manrope',sans-serif;}
 button{font-family:inherit;}
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;}
@@ -140,7 +140,335 @@ header.topbar{
 }
 .reset-btn:hover{color:#fff;border-color:rgba(255,255,255,.4);}
 
-/* ---------------- Filter bar ---------------- */
+/* ---------------- Filter Sidebar Drawer & Floating Toggle ---------------- */
+/* Floating Filter Toggle Handle (pinned on left screen edge - default state) */
+.filter-toggle-btn {
+  position: fixed;
+  left: 0;
+  top: 220px;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #ffffff;
+  color: #123B37;
+  border: 1px solid #D2E9E3;
+  border-left: none;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  padding: 9px 13px 9px 9px;
+  box-shadow: 0 4px 18px rgba(14, 46, 42, 0.14), 0 1px 3px rgba(14, 46, 42, 0.08);
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s, box-shadow 0.18s, opacity 0.18s;
+  user-select: none;
+}
+.filter-toggle-btn:hover {
+  background: #F0FDF4;
+  border-color: #6FE3B4;
+  color: #0D3832;
+  transform: translateX(4px);
+  box-shadow: 0 6px 22px rgba(14, 46, 42, 0.22);
+}
+.filter-toggle-btn.is-active,
+body.filter-sidebar-open .filter-toggle-btn {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-100%);
+}
+.filter-toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2F7C72;
+}
+.filter-toggle-chevron {
+  font-size: 14px;
+  font-weight: 800;
+  color: #2F7C72;
+  line-height: 1;
+  margin-left: -2px;
+}
+.filter-toggle-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: #123B37;
+}
+.filter-toggle-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #10B981;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 9px;
+  padding: 0 4px;
+  margin-left: 2px;
+}
+
+/* Backdrop Overlay */
+.filter-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(14, 46, 42, 0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 1040;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.filter-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Collapsible Left Filter Sidebar */
+.filter-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 340px;
+  max-width: 88vw;
+  background: #ffffff;
+  border-right: 1px solid var(--line);
+  box-shadow: 14px 0 42px rgba(14, 46, 42, 0.22);
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s ease;
+  visibility: hidden;
+}
+.filter-sidebar.is-open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+/* Edge toggle handle on open sidebar (like reference screenshot) */
+.filter-sidebar-edge-toggle {
+  position: absolute;
+  right: -15px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid #2F7C72;
+  box-shadow: 0 4px 12px rgba(14, 46, 42, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1B5751;
+  cursor: pointer;
+  z-index: 1051;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s;
+}
+.filter-sidebar-edge-toggle:hover {
+  background: #F0FDF4;
+  transform: translateY(-50%) scale(1.12);
+  color: #0D3832;
+}
+
+/* Sidebar Header */
+.filter-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #123B37 0%, #1B5751 100%);
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+.filter-sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+.filter-sidebar-title svg {
+  color: #6FE3B4;
+}
+.filter-sidebar-close {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.filter-sidebar-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.06);
+}
+
+/* Sidebar Result Info & Reset Bar */
+.filter-sidebar-info {
+  padding: 12px 20px;
+  background: #F8FAF9;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.filter-sidebar-info .result-count {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.filter-sidebar-info .result-count b {
+  color: var(--teal-700);
+}
+.filter-sidebar-reset-btn {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.filter-sidebar-reset-btn:hover {
+  border-color: #EF4444;
+  color: #EF4444;
+  background: #FEF2F2;
+}
+
+/* Sidebar Scrollable Body */
+.filter-sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px 20px 90px 20px;
+}
+.filter-sidebar-body::-webkit-scrollbar {
+  width: 6px;
+}
+.filter-sidebar-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.filter-sidebar-body::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+.filter-sidebar-body::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Filter components within sidebar */
+.filter-sidebar .filterbar {
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  position: static;
+  top: auto;
+  z-index: auto;
+}
+.filter-sidebar .filterbar.is-stuck {
+  box-shadow: none;
+}
+.filter-sidebar .filterbar-head {
+  display: none;
+}
+.filter-sidebar .filter-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.filter-sidebar .date-field {
+  grid-column: auto;
+  width: 100%;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.filter-sidebar .date-field label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--ink-faint);
+  margin-bottom: 4px;
+}
+.filter-sidebar .date-field input {
+  background: #F8FAF9;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 11.5px;
+}
+.filter-sidebar .msel {
+  width: 100%;
+  position: relative;
+}
+.filter-sidebar .msel-btn {
+  width: 100%;
+  box-sizing: border-box;
+}
+.filter-sidebar .msel-panel {
+  width: 100%;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  max-height: 250px;
+  z-index: 120;
+  box-shadow: 0 10px 28px rgba(14, 46, 42, 0.18);
+}
+
+/* Sidebar Footer */
+.filter-sidebar-foot {
+  padding: 14px 20px;
+  background: #ffffff;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.filter-apply-btn {
+  flex: 1;
+  background: var(--teal-700);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+  text-align: center;
+}
+.filter-apply-btn:hover {
+  background: var(--teal-800);
+}
+
+/* Fallback standalone filterbar (if ever used) */
 .filterbar{
   margin-top:22px;
   background:var(--white);
@@ -148,7 +476,6 @@ header.topbar{
   border-radius:var(--radius);
   box-shadow:var(--shadow-sm);
   padding:16px 18px;
-  /* Frozen filter bar: sticks right below the tab bar + header (heights set by layout.js) */
   position:sticky;
   top:calc(var(--nav-h,0px) + var(--top-h,0px));
   z-index:55;
