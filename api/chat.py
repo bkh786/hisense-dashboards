@@ -19,8 +19,8 @@ from http.server import BaseHTTPRequestHandler
 
 # In-memory cached dataset store
 _DATA_CACHE = {
-    "sales": {"mtime": 0, "path": "", "data": None, "pipe_table": ""},
-    "display_comparison": {"mtime": 0, "path": "", "data": None, "pipe_table": ""},
+    "sales": {"mtime": 0, "path": "", "data": None, "pipe_table": "", "live_max_iso": "", "live_pipe_table": ""},
+    "display_comparison": {"mtime": 0, "path": "", "data": None, "pipe_table": "", "live_max_iso": "", "live_pipe_table": ""},
 }
 
 # Cache for discovered Google models to avoid repeated network calls
@@ -33,13 +33,37 @@ _MODEL_CACHE = {
 MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
+def parse_any_date_to_iso(date_str):
+    """Normalize '2026-10-31', '31 Oct 2026', or '31-Oct-2026' into ISO 'YYYY-MM-DD'."""
+    if not date_str:
+        return ""
+    s = str(date_str).strip()
+    try:
+        parts = s.split("-")
+        if len(parts) == 3 and len(parts[0]) == 4 and parts[0].isdigit():
+            return f"{int(parts[0]):04d}-{int(parts[1]):02d}-{int(parts[2]):02d}"
+        import re
+        m = re.match(r"^(\d{1,2})[\s\-/]+([A-Za-z]{3,})[\s\-/,]+(\d{4})$", s)
+        if m:
+            d = int(m.group(1))
+            mon_prefix = m.group(2)[:3].lower()
+            y = int(m.group(3))
+            for idx, mn in enumerate(MONTH_NAMES):
+                if mn.lower() == mon_prefix:
+                    return f"{y:04d}-{idx + 1:02d}-{d:02d}"
+    except Exception:
+        pass
+    return ""
+
+
 def format_iso_date(iso_str, default="Latest"):
     """Format an ISO date string like '2026-10-30' as '30-Oct-2026'."""
     if not iso_str:
         return default
+    norm = parse_any_date_to_iso(iso_str) or str(iso_str).strip()
     try:
-        parts = str(iso_str).strip().split("-")
-        if len(parts) == 3:
+        parts = norm.split("-")
+        if len(parts) == 3 and len(parts[0]) == 4:
             y, m, d = parts
             m_idx = int(m) - 1
             if 0 <= m_idx < 12:
@@ -53,9 +77,10 @@ def format_pretty_date(iso_str, default="Latest"):
     """Format an ISO date string like '2026-10-30' as '30 Oct 2026'."""
     if not iso_str:
         return default
+    norm = parse_any_date_to_iso(iso_str) or str(iso_str).strip()
     try:
-        parts = str(iso_str).strip().split("-")
-        if len(parts) == 3:
+        parts = norm.split("-")
+        if len(parts) == 3 and len(parts[0]) == 4:
             y, m, d = parts
             m_idx = int(m) - 1
             if 0 <= m_idx < 12:
@@ -529,8 +554,8 @@ def build_display_comparison_pipe_table(dc_data):
                 by_bm[f"{s['bm']} ({s['region']})"]["d2"] += cnt
                 by_tl[f"{s['tl']} ({s['state']})"]["d2"] += cnt
 
-    total_d1 = sum(o["d1"] for o in outlets.values())
-    total_d2 = sum(o["d2"] for o in outlets.values())
+    total_d1 = int(round(sum(o["d1"] for o in outlets.values())))
+    total_d2 = int(round(sum(o["d2"] for o in outlets.values())))
     total_diff = total_d1 - total_d2
     pct_change = round(total_diff / total_d2 * 100, 1) if total_d2 > 0 else 0
     with_d1 = len([o for o in outlets.values() if o["d1"] > 0])
@@ -544,9 +569,9 @@ def build_display_comparison_pipe_table(dc_data):
     max_date = dc_data.get("maxDate")
     if not max_date and dc_data.get("records"):
         dc_dates = [r.get("date") for r in dc_data["records"] if r.get("date")]
-        max_date = max(dc_dates) if dc_dates else "2026-10-30"
+        max_date = max(dc_dates) if dc_dates else "2026-10-31"
     if not max_date:
-        max_date = "2026-10-30"
+        max_date = "2026-10-31"
     display_as_of = format_iso_date(max_date)
 
     lines = []
@@ -650,10 +675,13 @@ def build_display_comparison_pipe_table(dc_data):
 
 
 def get_dataset_recency():
-    """Dynamically determine maximum dates from loaded datasets without hardcoding."""
+    """Dynamically determine maximum dates from loaded datasets or live client sync without hardcoding."""
     sales, _ = get_sales_dataset()
     sale_dates = [r.get("saleDate") or r.get("subDate") for r in sales if (r.get("saleDate") or r.get("subDate"))]
-    sales_max = max(sale_dates) if sale_dates else "2026-10-29"
+    sales_max = max(sale_dates) if sale_dates else "2026-10-30"
+    live_sales_iso = _DATA_CACHE["sales"].get("live_max_iso") or ""
+    if live_sales_iso and live_sales_iso > sales_max:
+        sales_max = live_sales_iso
     sales_as_of = format_iso_date(sales_max)
     sales_pretty = format_pretty_date(sales_max)
 
@@ -661,9 +689,12 @@ def get_dataset_recency():
     dc_max = dc_data.get("maxDate")
     if not dc_max and dc_data.get("records"):
         dc_dates = [r.get("date") for r in dc_data["records"] if r.get("date")]
-        dc_max = max(dc_dates) if dc_dates else "2026-10-30"
+        dc_max = max(dc_dates) if dc_dates else "2026-10-31"
     if not dc_max:
-        dc_max = "2026-10-30"
+        dc_max = "2026-10-31"
+    live_dc_iso = _DATA_CACHE["display_comparison"].get("live_max_iso") or ""
+    if live_dc_iso and live_dc_iso > dc_max:
+        dc_max = live_dc_iso
     display_as_of = format_iso_date(dc_max)
     display_pretty = format_pretty_date(dc_max)
 
@@ -681,13 +712,35 @@ def get_dataset_recency():
 # SYSTEM INSTRUCTION BUILDER
 # =========================================================================
 
-def build_system_instruction(dashboard_type="sales", active_filters=None, page_date=None):
-    """Construct complete pre-warmed prompt context with active filter and live screen date awareness."""
+def build_system_instruction(dashboard_type="sales", active_filters=None, page_date=None, max_date_iso=None, client_pipe_table=None):
+    """Construct complete pre-warmed prompt context with live client dataset and screen date awareness."""
     parts = []
     recency = get_dataset_recency()
 
     is_display = dashboard_type in ("display_comparison", "display", "comparison")
+    client_iso = parse_any_date_to_iso(max_date_iso) or parse_any_date_to_iso(page_date)
+
+    if client_iso:
+        if is_display:
+            recency["display_max"] = client_iso
+            recency["display_as_of"] = format_iso_date(client_iso)
+            recency["display_pretty"] = format_pretty_date(client_iso)
+            if client_iso >= (_DATA_CACHE["display_comparison"].get("live_max_iso") or ""):
+                _DATA_CACHE["display_comparison"]["live_max_iso"] = client_iso
+                if client_pipe_table:
+                    _DATA_CACHE["display_comparison"]["live_pipe_table"] = client_pipe_table
+        else:
+            recency["sales_max"] = client_iso
+            recency["sales_as_of"] = format_iso_date(client_iso)
+            recency["sales_pretty"] = format_pretty_date(client_iso)
+            if client_iso >= (_DATA_CACHE["sales"].get("live_max_iso") or ""):
+                _DATA_CACHE["sales"]["live_max_iso"] = client_iso
+                if client_pipe_table:
+                    _DATA_CACHE["sales"]["live_pipe_table"] = client_pipe_table
+
     active_date_label = page_date or (recency["display_pretty"] if is_display else recency["sales_pretty"])
+    active_dash_label = recency["display_as_of"] if is_display else recency["sales_as_of"]
+    active_iso_label = recency["display_max"] if is_display else recency["sales_max"]
 
     parts.append(
         "You are the Hisense AI Copilot, an ultra-premium data-aware analytical assistant "
@@ -695,11 +748,10 @@ def build_system_instruction(dashboard_type="sales", active_filters=None, page_d
         "Your role is to assist national leaders, Regional Sales Managers (RSMs), Branch Managers (BMs), "
         "Team Leaders (TLs), and promoters by providing fast, precise, and executive-ready answers.\n\n"
         f"### 🕒 REAL-TIME DATASET RECENCY & SCREEN SYNCHRONIZATION:\n"
-        f"- The active dashboard on user's screen displays data updated up to: {active_date_label}.\n"
-        f"- The Sales Performance dataset is live and authoritative as on {recency['sales_as_of']} (Max record date: {recency['sales_max']}).\n"
-        f"- The Display Comparison dataset is live and authoritative as on {recency['display_as_of']} (Max audit date: {recency['display_max']}).\n"
-        "- Under NO circumstances claim that data is outdated, cached, or from an obsolete historical date (such as 17-Oct-2026, 26-Oct-2026, or 27-Oct-2026).\n"
-        f"- When answering questions about dataset recency or update status, ALWAYS state that data is live, current, and updated up to {active_date_label} ({recency['display_as_of']} for Displays, {recency['sales_as_of']} for Sales).\n\n"
+        f"- The active dashboard on the user's screen is LIVE and updated up to: {active_date_label} ({active_dash_label}, ISO: {active_iso_label}).\n"
+        f"- When citing the dataset date in your response, ALWAYS state '{active_date_label}' or '{active_dash_label}' (NEVER cite an older date such as 30-Oct-2026 when the active dashboard is at {active_date_label}).\n"
+        "- CRITICAL OVERRIDE: If any earlier message in the conversation history mentions an older date or older figures, IGNORE those older figures and strictly use the live dataset metrics below.\n"
+        "- Under NO circumstances claim that data is outdated, cached, or from an obsolete historical date.\n\n"
         "### 🎯 STRICT RESPONSE MODES & PRECISION GUIDELINES:\n"
         "1. DIRECT QUESTIONS (Factual, Metric, Ranking, Store, Promoter, or Date):\n"
         "   - Definition: The user asks for a specific number, name, outlet, promoter, rank, date, or direct comparison "
@@ -707,7 +759,7 @@ def build_system_instruction(dashboard_type="sales", active_filters=None, page_d
         "   - Mandatory Behavior:\n"
         "     * Answer IMMEDIATELY and DIRECTLY in the very first sentence.\n"
         "     * Provide ONLY the exact requested metrics/names with minimal essential context (e.g., store name, code, state, and units/values).\n"
-        "     * DO NOT add introductory filler or preambles (NEVER say 'Based on the authoritative dataset...', 'The dataset tracks 635 outlets across regions...', 'To provide you with the absolute exact single store...').\n"
+        "     * DO NOT add introductory filler or preambles (NEVER say 'Based on the authoritative dataset...', 'The dataset tracks...', 'To provide you with the absolute exact single store...').\n"
         "     * DO NOT provide unsolicited suggestions, background narratives, or lectures on direct questions.\n"
         "     * Keep the response strictly focused, concise, and token-efficient (typically 1 to 3 short sentences or a clean mini-table).\n\n"
         "2. NON-DIRECT / STRATEGIC QUESTIONS (Open-ended, Diagnostic, or Advisory):\n"
@@ -739,13 +791,21 @@ def build_system_instruction(dashboard_type="sales", active_filters=None, page_d
     else:
         parts.append("### 🎯 USER'S ACTIVE SCREEN FILTERS: None (Viewing Full National Dashboard)\n")
 
-    # Inject pre-loaded dataset
-    if dashboard_type in ("display_comparison", "display", "comparison"):
-        _, pipe_table = get_display_comparison_dataset()
+    # Inject live dataset (prioritizing live client pipe table from the browser's SharePoint-synced memory)
+    if is_display:
+        pipe_table = (
+            client_pipe_table
+            or _DATA_CACHE["display_comparison"].get("live_pipe_table")
+            or get_display_comparison_dataset()[1]
+        )
         parts.append("### 📊 PRE-LOADED DATASET: HISENSE DISPLAY COMPARISON (D-1 vs D-2):\n")
         parts.append(pipe_table)
     else:
-        _, pipe_table = get_sales_dataset()
+        pipe_table = (
+            client_pipe_table
+            or _DATA_CACHE["sales"].get("live_pipe_table")
+            or get_sales_dataset()[1]
+        )
         parts.append("### 📊 PRE-LOADED DATASET: HISENSE SALES PERFORMANCE (PROMOTER PROGRAM):\n")
         parts.append(pipe_table)
 
@@ -852,8 +912,16 @@ def process_chat_query(body, api_key):
     active_filters = body.get("activeFilters", {})
     history = body.get("history", [])
     page_date = body.get("pageDate") or body.get("maxDateLabel") or body.get("pageDatasetDate")
+    max_date_iso = body.get("maxDateIso") or ""
+    client_pipe_table = body.get("clientPipeTable") or ""
 
-    system_instruction_text = build_system_instruction(dashboard_type, active_filters, page_date=page_date)
+    system_instruction_text = build_system_instruction(
+        dashboard_type,
+        active_filters,
+        page_date=page_date,
+        max_date_iso=max_date_iso,
+        client_pipe_table=client_pipe_table,
+    )
 
     contents = []
     # Include up to last 8 turns of conversation history for conversational context

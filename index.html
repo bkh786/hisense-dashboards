@@ -910,6 +910,12 @@ function renderLeaderboard(containerId, items, opts = {}) {
    MASTER RENDER
    ========================================================================= */
 function renderAll() {
+  window.RECORDS = RECORDS;
+  window.state = state;
+  window.getFiltered = getFiltered;
+  window.getSalesRows = getSalesRows;
+  window.isPromoterRecord = isPromoterRecord;
+  window.computeRoiAggregate = computeRoiAggregate;
   const filtered = getFiltered();
   const sales = getSalesRows(filtered);
 
@@ -1557,70 +1563,79 @@ async function fetchFileBuffer(url) {
 
 async function fetchLiveData(force = false) {
   const now = Date.now();
-  if (isFetchingLive) return;
+  if (isFetchingLive) return window.LIVE_DATA_PROMISE;
   if (!force && lastFetchTime && (now - lastFetchTime < 10000)) return;
   isFetchingLive = true;
+  window.isFetchingLive = true;
 
   const btn = document.getElementById('uploadBtn');
   if (btn) {
     btn.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#f59e0b;border-radius:50%;"></span> Loading live data...';
     btn.disabled = true;
   }
-  try {
-    let buffer = null;
+  const p = (async () => {
     try {
-      buffer = await fetchFileBuffer(DIRECT_DOWNLOAD_URL);
-    } catch (err1) {
-      console.warn("Direct download failed, trying standard share link...", err1);
-      buffer = await fetchFileBuffer(EXCEL_URL);
-    }
-    const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: false });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-    const newRecords = rows.filter(r => r['Response Code']).map(r => {
-      const rec = {};
-      Object.keys(COLMAP).forEach(k => rec[COLMAP[k]] = r[k]);
-      rec.saleDate = toISO(r['Sale Date']); // column P, used as-is — no derivation
-      rec.backdated = !!toISO(r['Add this in case of backdates sales']);
-      rec.salesMonth = r['Sales Month'] ? String(r['Sales Month']).trim() : '';
-      if (!rec.salesMonth && rec.saleDate) {
-        const parts = rec.saleDate.split('-');
-        if (parts.length >= 2) {
-          const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-          const mIdx = parseInt(parts[1], 10) - 1;
-          if (mIdx >= 0 && mIdx < 12) {
-            rec.salesMonth = `${MONTH_NAMES[mIdx]}-${parts[0].slice(-2)}`;
+      let buffer = null;
+      try {
+        buffer = await fetchFileBuffer(DIRECT_DOWNLOAD_URL);
+      } catch (err1) {
+        console.warn("Direct download failed, trying standard share link...", err1);
+        buffer = await fetchFileBuffer(EXCEL_URL);
+      }
+      const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: false });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const newRecords = rows.filter(r => r['Response Code']).map(r => {
+        const rec = {};
+        Object.keys(COLMAP).forEach(k => rec[COLMAP[k]] = r[k]);
+        rec.subDate = toISO(r['Submitted Date']);
+        rec.saleDate = toISO(r['Sale Date']); // column P, used as-is — no derivation
+        rec.backdated = !!toISO(r['Add this in case of backdates sales']);
+        rec.salesMonth = r['Sales Month'] ? String(r['Sales Month']).trim() : '';
+        if (!rec.salesMonth && rec.saleDate) {
+          const parts = rec.saleDate.split('-');
+          if (parts.length >= 2) {
+            const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const mIdx = parseInt(parts[1], 10) - 1;
+            if (mIdx >= 0 && mIdx < 12) {
+              rec.salesMonth = `${MONTH_NAMES[mIdx]}-${parts[0].slice(-2)}`;
+            }
           }
         }
+        rec.qty = Number(rec.qty) || 0;
+        rec.value = Number(rec.value) || 0;
+        rec.price = Number(rec.price) || 0;
+        rec.ctc = Number(rec.ctc) || 0;
+        return rec;
+      });
+      if (newRecords.length > 0) {
+        RECORDS = newRecords;
+        window.RECORDS = RECORDS;
+        syncMaxDateHeader();
+        refreshRoleSets();
+        initFilterDefaults(true);
+        buildFilterUI();
+        renderAll();
+        lastFetchTime = Date.now();
       }
-      rec.qty = Number(rec.qty) || 0;
-      rec.value = Number(rec.value) || 0;
-      rec.price = Number(rec.price) || 0;
-      rec.ctc = Number(rec.ctc) || 0;
-      return rec;
-    });
-    if (newRecords.length > 0) {
-      RECORDS = newRecords;
-      syncMaxDateHeader();
-      refreshRoleSets();
-      initFilterDefaults(true);
-      buildFilterUI();
-      renderAll();
-      lastFetchTime = Date.now();
+      if (btn) {
+        btn.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;"></span> Live data connected';
+        btn.disabled = false;
+      }
+    } catch (err) {
+      console.error("Live fetch error:", err);
+      if (btn) {
+        btn.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:50%;"></span> Live data offline';
+        btn.disabled = false;
+      }
+    } finally {
+      isFetchingLive = false;
+      window.isFetchingLive = false;
+      window.LIVE_DATA_PROMISE = null;
     }
-    if (btn) {
-      btn.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;"></span> Live data connected';
-      btn.disabled = false;
-    }
-  } catch (err) {
-    console.error("Live fetch error:", err);
-    if (btn) {
-      btn.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:50%;"></span> Live data offline';
-      btn.disabled = false;
-    }
-  } finally {
-    isFetchingLive = false;
-  }
+  })();
+  window.LIVE_DATA_PROMISE = p;
+  return p;
 }
 
 document.getElementById('uploadBtn').addEventListener('click', () => fetchLiveData(true));
@@ -1648,6 +1663,9 @@ function syncMaxDateHeader() {
     window.MAX_DATE = mx;
     const label = document.getElementById('maxDateLabel');
     if (label) label.textContent = prettyDate(mx);
+    try {
+      window.dispatchEvent(new CustomEvent('hisense:data-updated', { detail: { maxDate: mx, dashboard: 'sales' } }));
+    } catch (e) {}
   }
 }
 
