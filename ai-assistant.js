@@ -26,9 +26,18 @@
   // Determine current dashboard type
   function detectDashboardType() {
     const path = window.location.pathname.toLowerCase();
-    const title = document.title.toLowerCase();
+    const title = (document.title || '').toLowerCase();
     if (path.includes('display_comparison') || title.includes('display comparison') || document.getElementById('tblBM')) {
       return 'display_comparison';
+    }
+    if (path.includes('display') || title.includes('display')) {
+      return 'display';
+    }
+    if (path.includes('attendance') || title.includes('attendance')) {
+      return 'attendance';
+    }
+    if (path.includes('hiring') || title.includes('hiring')) {
+      return 'hiring';
     }
     return 'sales';
   }
@@ -800,31 +809,65 @@
     widget.id = 'hisenseAiWidget';
 
     const isSales = currentDashboard === 'sales';
-    const initialChips = isSales ? [
-      'Top 5 Promoters by Sales',
-      'TV vs AC Sales Breakdown',
-      'Which Zone leads in Sales Value?',
-      'Show Promoters with Zero Sales',
-      'Expected ROI per Zone'
-    ] : [
-      'D-1 vs D-2 Display Summary',
-      'Which States saw highest Gain?',
-      'Top Outlets Needing Attention',
-      'TV vs AC vs Washing Machine Change',
-      'Branch Managers with Highest Growth'
-    ];
+    const isDisplayComp = currentDashboard === 'display_comparison';
+    const isDisplay = currentDashboard === 'display';
+    const isAttendance = currentDashboard === 'attendance';
+    const isHiring = currentDashboard === 'hiring';
+
+    let initialChips = [];
+    if (isDisplayComp) {
+      initialChips = [
+        'D-1 vs D-2 Display Summary',
+        'Which States saw highest Gain?',
+        'Top Outlets Needing Attention',
+        'TV vs AC vs Washing Machine Change',
+        'Branch Managers with Highest Growth'
+      ];
+    } else if (isDisplay) {
+      initialChips = [
+        'Display Overview & Total Units',
+        'Top Performing Outlets by Display',
+        'Category-wise Display Share (TV, AC, WM)',
+        'State-wise Display Units Breakdown'
+      ];
+    } else if (isAttendance) {
+      initialChips = [
+        'Today\'s Attendance Rate & Present Count',
+        'Absenteeism Summary by State',
+        'Promoter Punch-in Compliance',
+        'Top Regions by Attendance'
+      ];
+    } else if (isHiring) {
+      initialChips = [
+        'Hiring & Vacancy Summary',
+        'Open Positions by Region',
+        'Promoter Deployment Status',
+        'Positions Needing Urgent Hiring'
+      ];
+    } else {
+      initialChips = [
+        'Top 5 Promoters by Sales',
+        'TV vs AC Sales Breakdown',
+        'Which Zone leads in Sales Value?',
+        'Show Promoters with Zero Sales',
+        'Expected ROI per Zone'
+      ];
+    }
 
     widget.innerHTML = `
-      <!-- Launcher Button -->
-      <button class="hisense-ai-launcher" id="hisenseAiLauncher" title="Open Hisense AI Copilot">
-        <div class="hisense-ai-launcher-icon-wrap">
+      <!-- Right-Edge Vertical Tab Launcher -->
+      <button id="aiCopilotLauncher" class="ai-copilot-launcher hisense-ai-launcher" aria-label="Toggle AI Copilot" title="Open Hisense AI Copilot" aria-expanded="false">
+        <svg class="ai-copilot-chevron hisense-ai-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <div class="ai-copilot-launcher-icon hisense-ai-launcher-icon">
           <div class="hisense-ai-launcher-pulse"></div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
           </svg>
         </div>
-        <span class="hisense-ai-launcher-label">AI Copilot</span>
-        <span class="hisense-ai-launcher-status-dot" id="hisenseLauncherDot"></span>
+        <span class="ai-copilot-launcher-text hisense-ai-launcher-label">AI Copilot</span>
+        <span class="ai-copilot-status-dot hisense-ai-launcher-status-dot" id="hisenseLauncherDot" title="Live connected"></span>
       </button>
 
       <!-- Chat Drawer -->
@@ -918,7 +961,13 @@
               class="hisense-ai-input"
               id="hisenseInput"
               rows="1"
-              placeholder="Ask anything about ${isSales ? 'sales, ROI, promoters, or zones' : 'D-1 vs D-2 displays, growth, or outlets'}..."
+              placeholder="Ask anything about ${
+                isDisplayComp ? 'D-1 vs D-2 displays, growth, or outlets' :
+                isDisplay ? 'product displays, categories, or outlets' :
+                isAttendance ? 'attendance, present rates, or promoters' :
+                isHiring ? 'vacancies, hiring status, or roles' :
+                'sales, ROI, promoters, or zones'
+              }..."
             ></textarea>
             <button class="hisense-ai-send-btn" id="hisenseSendBtn" type="button" title="Send (Enter)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -942,7 +991,7 @@
   // EVENT BINDINGS & INTERACTIONS
   // =========================================================================
   function bindEvents() {
-    const launcher = document.getElementById('hisenseAiLauncher');
+    const launcher = document.getElementById('aiCopilotLauncher') || document.getElementById('hisenseAiLauncher');
     const drawer = document.getElementById('hisenseAiDrawer');
     const closeBtn = document.getElementById('hisenseCloseBtn');
     const maxBtn = document.getElementById('hisenseMaxBtn');
@@ -953,16 +1002,43 @@
     const sendBtn = document.getElementById('hisenseSendBtn');
     const chipsWrap = document.getElementById('hisenseChips');
 
-    // Toggle Drawer
-    launcher.addEventListener('click', () => {
-      isOpen = !isOpen;
+    // Centralized Drawer Toggle Function
+    function toggleDrawer(forceState) {
+      isOpen = (typeof forceState === 'boolean') ? forceState : !isOpen;
       drawer.classList.toggle('is-open', isOpen);
+      drawer.classList.toggle('open', isOpen);
+      if (launcher) {
+        launcher.classList.toggle('is-open', isOpen);
+        launcher.classList.toggle('open', isOpen);
+        launcher.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        launcher.title = isOpen ? 'Close Hisense AI Copilot' : 'Open Hisense AI Copilot';
+      }
       if (isOpen) {
         if (!isConnected) {
           checkHealth();
         }
         syncFilters();
         setTimeout(() => input.focus(), 150);
+      }
+    }
+
+    // Toggle Drawer on Launcher click
+    if (launcher) {
+      launcher.addEventListener('click', () => {
+        toggleDrawer();
+      });
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        toggleDrawer(false);
+      });
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        toggleDrawer(false);
       }
     });
 
@@ -996,61 +1072,72 @@
       }
     }, 15000);
 
-    closeBtn.addEventListener('click', () => {
-      isOpen = false;
-      drawer.classList.remove('is-open');
-    });
-
     // Maximize / Restore
-    maxBtn.addEventListener('click', () => {
-      isMaximized = !isMaximized;
-      drawer.classList.toggle('is-maximized', isMaximized);
-      maxBtn.title = isMaximized ? 'Restore Drawer' : 'Expand Drawer';
-    });
+    if (maxBtn) {
+      maxBtn.addEventListener('click', () => {
+        isMaximized = !isMaximized;
+        drawer.classList.toggle('is-maximized', isMaximized);
+        maxBtn.title = isMaximized ? 'Restore Drawer' : 'Expand Drawer';
+      });
+    }
 
     // Clear history
-    clearBtn.addEventListener('click', () => {
-      conversationHistory = [];
-      const msgs = document.getElementById('hisenseMessages');
-      const welcome = msgs.querySelector('.hisense-ai-welcome-card');
-      msgs.innerHTML = '';
-      if (welcome) msgs.appendChild(welcome);
-    });
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        conversationHistory = [];
+        const msgs = document.getElementById('hisenseMessages');
+        if (msgs) {
+          const welcome = msgs.querySelector('.hisense-ai-welcome-card');
+          msgs.innerHTML = '';
+          if (welcome) msgs.appendChild(welcome);
+        }
+      });
+    }
 
     // Status Pill Health Check on Click
-    statusPill.addEventListener('click', () => {
-      checkHealth(true);
-    });
+    if (statusPill) {
+      statusPill.addEventListener('click', () => {
+        checkHealth(true);
+      });
+    }
 
     // Refresh context manually
-    contextRefresh.addEventListener('click', () => {
-      syncFilters();
-    });
+    if (contextRefresh) {
+      contextRefresh.addEventListener('click', () => {
+        syncFilters();
+      });
+    }
 
     // Auto-resizing textarea
-    input.addEventListener('input', () => {
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 100) + 'px';
-    });
+    if (input) {
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+      });
 
-    // Submit on Enter (Shift+Enter for newline)
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        submitQuery();
-      }
-    });
+      // Submit on Enter (Shift+Enter for newline)
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          submitQuery();
+        }
+      });
+    }
 
-    sendBtn.addEventListener('click', submitQuery);
+    if (sendBtn) {
+      sendBtn.addEventListener('click', submitQuery);
+    }
 
     // Suggestion chips click delegation
-    chipsWrap.addEventListener('click', (e) => {
-      const chip = e.target.closest('.hisense-ai-chip');
-      if (chip) {
-        input.value = chip.textContent.trim();
-        submitQuery();
-      }
-    });
+    if (chipsWrap) {
+      chipsWrap.addEventListener('click', (e) => {
+        const chip = e.target.closest('.hisense-ai-chip');
+        if (chip && input) {
+          input.value = chip.textContent.trim();
+          submitQuery();
+        }
+      });
+    }
 
     // Listen to filter change events on the host page
     const filterbar = document.querySelector('.filterbar') || document.getElementById('filterGrid');
