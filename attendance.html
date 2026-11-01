@@ -112,30 +112,37 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 <div class="filter-backdrop" id="filterBackdrop"></div>
 
 <button type="button" class="filter-toggle-btn" id="filterToggleBtn" aria-expanded="false" title="Show filters">
+  <span class="filter-toggle-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
   <span class="filter-toggle-icon">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/></svg>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
   </span>
-  <span class="filter-toggle-chevron">&rsaquo;</span>
-  <span class="filter-toggle-text">Filters</span>
+  <span class="filter-toggle-text">FILTERS</span>
   <span class="filter-toggle-badge" id="filterActiveBadge" style="display:none;">0</span>
 </button>
 
 <aside class="filter-sidebar" id="filterSidebar" aria-label="Filters sidebar">
   <button type="button" class="filter-sidebar-edge-toggle" id="filterSidebarEdgeToggle" title="Collapse filters">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    <span class="filter-toggle-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span>
+    <span class="filter-toggle-icon">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+    </span>
+    <span class="filter-toggle-text">FILTERS</span>
   </button>
   <div class="filter-sidebar-head">
     <div class="filter-sidebar-title">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-      <span>Dashboard Filters</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      <span>Filters</span>
     </div>
-    <button type="button" class="filter-sidebar-close" id="filterSidebarClose" title="Collapse filters (Esc)">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
+    <div class="filter-sidebar-head-right">
+      <span class="filter-count-pill"><b id="userCount">0</b> Promoters</span>
+      <button type="button" class="filter-sidebar-close" id="filterSidebarClose" title="Collapse filters (Esc)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        <span>Collapse</span>
+      </button>
+    </div>
   </div>
   <div class="filter-sidebar-info">
-    <div class="result-count"><b id="rowCount">0</b> matching person-days &middot; <b id="userCount">0</b> unique users</div>
-    <button type="button" class="filter-sidebar-reset-btn" id="filterSidebarReset">Reset all</button>
+    <div class="result-count"><b id="rowCount">0</b> matching person-days</div>
   </div>
   <div class="filter-sidebar-body">
     <div class="filterbar" id="filterBar">
@@ -143,6 +150,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     </div>
   </div>
   <div class="filter-sidebar-foot">
+    <button type="button" class="filter-reset-full-btn" id="filterSidebarReset">Reset Filters</button>
     <button type="button" class="filter-apply-btn" id="filterSidebarApply">View Results</button>
   </div>
 </aside>
