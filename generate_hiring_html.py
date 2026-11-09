@@ -12,8 +12,8 @@ html_content = '''<!DOCTYPE html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="master.css">
-<link rel="stylesheet" href="ai-assistant.css">
+<link rel="stylesheet" href="master.css?v=2">
+<link rel="stylesheet" href="ai-assistant.css?v=2">
 <script src="chart.min.js"></script>
 <script>window.Chart || document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"><\\/script>');</script>
 <script src="xlsx.full.min.js"></script>
