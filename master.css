@@ -5,6 +5,8 @@
    ========================================================================== */
 
 :root{
+  --sidebar-w:56px;
+  --sidebar-expanded-w:240px;
   --teal-950:#0E2E2A;
   --teal-900:#123B37;
   --teal-800:#1B5751;
@@ -39,6 +41,7 @@
 html{scroll-behavior:smooth;}
 body{
   margin:0;
+  padding-left:var(--sidebar-w, 56px);
   background:var(--page);
   background-image:
     radial-gradient(1200px 500px at 8% -8%, rgba(78,171,157,.10), transparent 60%),
@@ -141,13 +144,14 @@ header.topbar{
 .reset-btn:hover{color:#fff;border-color:rgba(255,255,255,.4);}
 
 /* ---------------- Filter Sidebar Drawer & Floating Toggle ---------------- */
-/* Floating Vertical Filter Tab (pinned on left screen edge - collapsed state) */
+/* Floating Vertical Filter Tab (pinned on right screen edge - collapsed state, above AI Copilot) */
 .filter-toggle-btn {
   position: fixed;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 900;
+  right: 0;
+  left: auto;
+  top: calc(50% - 130px);
+  transform: translateY(0);
+  z-index: 9990;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -158,24 +162,25 @@ header.topbar{
   background: linear-gradient(180deg, var(--teal-600) 0%, var(--teal-800) 100%);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-left: none;
-  border-radius: 0 10px 10px 0;
-  box-shadow: 4px 6px 20px rgba(14, 46, 42, 0.28), 0 1px 4px rgba(14, 46, 42, 0.16);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -4px 6px 20px rgba(14, 46, 42, 0.28), 0 1px 4px rgba(14, 46, 42, 0.16);
   cursor: pointer;
   font-family: 'Inter', sans-serif;
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s, box-shadow 0.18s, opacity 0.18s;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s, box-shadow 0.18s, opacity 0.18s, width 0.18s;
   user-select: none;
 }
 .filter-toggle-btn:hover {
   background: linear-gradient(180deg, var(--teal-500) 0%, var(--teal-700) 100%);
-  box-shadow: 6px 8px 24px rgba(14, 46, 42, 0.36);
-  width: 32px;
+  box-shadow: -6px 8px 24px rgba(14, 46, 42, 0.36);
+  transform: translateX(-2px);
+  width: 34px;
 }
 .filter-toggle-btn.is-active,
 body.filter-sidebar-open .filter-toggle-btn {
   opacity: 0;
   pointer-events: none;
-  transform: translate(-100%, -50%);
+  transform: translate(100%, 0);
 }
 .filter-toggle-chevron {
   display: flex;
@@ -238,24 +243,25 @@ body.filter-sidebar-open .filter-toggle-btn {
   pointer-events: auto;
 }
 
-/* Floating Left Filter Card (Expanded State) */
+/* Floating Right Filter Card (Expanded State) */
 .filter-sidebar {
   position: fixed;
   top: 50%;
-  left: 0;
+  right: 0;
+  left: auto;
   bottom: auto;
   width: 304px;
   max-width: calc(100vw - 44px);
   max-height: calc(100vh - 44px);
   background: #ffffff;
   border: 1px solid #E2ECE9;
-  border-left: none;
-  border-radius: 0 16px 16px 0;
-  box-shadow: 16px 12px 44px rgba(14, 46, 42, 0.24), 0 2px 10px rgba(14, 46, 42, 0.1);
+  border-right: none;
+  border-radius: 16px 0 0 16px;
+  box-shadow: -16px 12px 44px rgba(14, 46, 42, 0.24), 0 2px 10px rgba(14, 46, 42, 0.1);
   z-index: 1050;
   display: flex;
   flex-direction: column;
-  transform: translate(calc(-100% - 36px), -50%);
+  transform: translate(calc(100% + 36px), -50%);
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s ease;
   visibility: hidden;
 }
@@ -264,20 +270,20 @@ body.filter-sidebar-open .filter-toggle-btn {
   visibility: visible;
 }
 
-/* Attached Vertical FILTERS Tab on Right Edge of Open Card */
+/* Attached Vertical FILTERS Tab on Left Edge of Open Card */
 .filter-sidebar-edge-toggle {
   position: absolute;
-  left: 100%;
-  right: auto;
+  right: 100%;
+  left: auto;
   top: 50%;
   transform: translateY(-50%);
   width: 30px;
   padding: 12px 0;
-  border-radius: 0 10px 10px 0;
+  border-radius: 10px 0 0 10px;
   background: linear-gradient(180deg, var(--teal-600) 0%, var(--teal-800) 100%);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-left: none;
-  box-shadow: 6px 6px 18px rgba(14, 46, 42, 0.24);
+  border-right: none;
+  box-shadow: -6px 6px 18px rgba(14, 46, 42, 0.24);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -294,7 +300,7 @@ body.filter-sidebar-open .filter-toggle-btn {
   background: linear-gradient(180deg, var(--teal-500) 0%, var(--teal-700) 100%);
   width: 32px;
   color: #ffffff;
-  box-shadow: 8px 8px 22px rgba(14, 46, 42, 0.32);
+  box-shadow: -8px 8px 22px rgba(14, 46, 42, 0.32);
 }
 
 /* Sidebar Card Header */
@@ -307,7 +313,7 @@ body.filter-sidebar-open .filter-toggle-btn {
   background: #ffffff;
   color: var(--ink);
   border-bottom: 1px solid #EDF2F0;
-  border-radius: 0 16px 0 0;
+  border-radius: 16px 0 0 0;
   flex-shrink: 0;
 }
 .filter-sidebar-title {
@@ -350,18 +356,13 @@ body.filter-sidebar-open .filter-toggle-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  width: 26px;
+  height: 26px;
   background: #F4F7F6;
   border: 1px solid #E2ECE9;
   border-radius: 7px;
-  padding: 4px 9px;
-  font-family: 'Inter', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
   color: var(--ink-soft);
   cursor: pointer;
-  white-space: nowrap;
-  line-height: 1.2;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .filter-sidebar-close:hover {
@@ -550,7 +551,7 @@ body.filter-sidebar-open .filter-toggle-btn {
   padding: 6px 16px 14px 16px;
   background: #ffffff;
   border-top: none;
-  border-radius: 0 0 16px 0;
+  border-radius: 0 0 0 16px;
   display: flex;
   gap: 8px;
   flex-shrink: 0;
@@ -828,17 +829,215 @@ footer .brand-line img{height:14px;opacity:.6;}
   .grid-3{grid-template-columns:1fr 1fr;}
 }
 /* =========================================================================
-   SAFARI BROWSER-STYLE TAB NAVIGATION BAR
+   LEFT SIDEBAR NAVIGATION (Auto-hover expansion, default collapsed)
+   ========================================================================= */
+.sidebar-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-w, 56px);
+  height: 100vh;
+  background: linear-gradient(180deg, #071715 0%, #0d2825 50%, #081d1a 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.22);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+  transition: width 0.26s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-nav:hover {
+  width: var(--sidebar-expanded-w, 240px);
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.48), 2px 0 8px rgba(14, 46, 42, 0.3);
+  z-index: 1002;
+}
+
+.sidebar-header {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #ffffff;
+  width: 100%;
+  height: 100%;
+}
+
+.sidebar-brand-icon {
+  width: var(--sidebar-w, 56px);
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-brand-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  background: rgba(45, 212, 191, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6FE3B4;
+  transition: all 0.2s ease;
+}
+
+.sidebar-brand:hover .sidebar-brand-box {
+  border-color: #6FE3B4;
+  background: rgba(45, 212, 191, 0.22);
+  box-shadow: 0 0 12px rgba(111, 227, 180, 0.35);
+}
+
+.sidebar-brand-text {
+  font-size: 13.5px;
+  font-weight: 800;
+  font-family: 'Manrope', sans-serif;
+  letter-spacing: 0.1px;
+  color: #ffffff;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.sidebar-nav:hover .sidebar-brand-text {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.sidebar-section-label {
+  padding: 16px 0 6px 16px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--teal-300, #82c6bb);
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity 0.18s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-nav:hover .sidebar-section-label {
+  opacity: 0.7;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+.sidebar-menu::-webkit-scrollbar { display: none; }
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  text-decoration: none;
+  color: rgba(234, 246, 243, 0.75);
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.sidebar-nav-item.active {
+  background: linear-gradient(90deg, rgba(45, 212, 191, 0.22) 0%, rgba(45, 212, 191, 0.06) 100%);
+  border-left-color: #6FE3B4;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.sidebar-nav-icon {
+  width: var(--sidebar-w, 56px);
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+  opacity: 0.85;
+  transition: opacity 0.15s, color 0.15s, transform 0.15s;
+}
+
+.sidebar-nav-item:hover .sidebar-nav-icon {
+  opacity: 1;
+  transform: scale(1.06);
+}
+
+.sidebar-nav-item.active .sidebar-nav-icon {
+  opacity: 1;
+  color: #6FE3B4;
+}
+
+.sidebar-nav-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.sidebar-nav:hover .sidebar-nav-label {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.sidebar-footer {
+  padding: 14px 0 14px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-footer-text {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.42);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.sidebar-nav:hover .sidebar-footer-text {
+  opacity: 1;
+}
+
+/* =========================================================================
+   LEGACY SAFARI BROWSER-STYLE TAB NAVIGATION BAR (if present)
    ========================================================================= */
 .browser-tab-nav {
-  background: #081a18;
-  background: linear-gradient(180deg, #071715 0%, #0d2825 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  user-select: none;
+  display: none; /* Replaced by Left Sidebar Navigation */
 }
 .browser-tabbar {
   display: flex;
@@ -925,6 +1124,9 @@ footer .brand-line img{height:14px;opacity:.6;}
 }
 
 @media (max-width:760px){
+  body{padding-left:0;}
+  .sidebar-nav{display:none;}
+  .filter-toggle-btn{top:calc(50% - 110px);}
   .filterbar{position:relative;top:auto;}
   .browser-tabbar { padding: 6px 8px 0 8px; }
   .nav-browser-tab { padding: 6px 12px 7px 10px; font-size: 11px; }

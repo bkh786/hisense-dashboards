@@ -1014,6 +1014,9 @@
         launcher.title = isOpen ? 'Close Hisense AI Copilot' : 'Open Hisense AI Copilot';
       }
       if (isOpen) {
+        if (typeof window.closeFilterSidebar === 'function') {
+          window.closeFilterSidebar();
+        }
         if (!isConnected) {
           checkHealth();
         }
@@ -1021,6 +1024,12 @@
         setTimeout(() => input.focus(), 150);
       }
     }
+
+    window.hisenseAiAssistant = {
+      closeDrawer: () => toggleDrawer(false),
+      openDrawer: () => toggleDrawer(true),
+      toggleDrawer: (state) => toggleDrawer(state),
+    };
 
     // Toggle Drawer on Launcher click
     if (launcher) {

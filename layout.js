@@ -31,6 +31,9 @@
     var resetBtn = document.getElementById('resetBtn');
 
     function openSidebar() {
+      if (window.hisenseAiAssistant && typeof window.hisenseAiAssistant.closeDrawer === 'function') {
+        window.hisenseAiAssistant.closeDrawer();
+      }
       sidebar.classList.add('is-open');
       if (backdrop) backdrop.classList.add('is-open');
       if (toggleBtn) {

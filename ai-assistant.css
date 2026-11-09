@@ -48,8 +48,8 @@
 .ai-copilot-launcher {
   position: fixed;
   right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: calc(50% + 8px);
+  transform: translateY(0);
   z-index: 9998;
   display: flex;
   flex-direction: column;
@@ -73,7 +73,7 @@
 .hisense-ai-launcher:hover,
 .ai-copilot-launcher:hover {
   background: linear-gradient(180deg, var(--teal-500, #2FA57E) 0%, var(--h-ai-primary, #1B5751) 100%);
-  transform: translateY(-50%) translateX(-2px);
+  transform: translateX(-2px);
   width: 34px;
   box-shadow: -6px 8px 24px rgba(14, 46, 42, 0.36), 0 0 16px rgba(47, 165, 126, 0.35);
   border-color: rgba(255, 255, 255, 0.35);
@@ -81,7 +81,7 @@
 
 .hisense-ai-launcher:active,
 .ai-copilot-launcher:active {
-  transform: translateY(-50%) translateX(-1px);
+  transform: translateX(-1px);
 }
 
 /* Directional Chevron at Top */
@@ -842,6 +842,7 @@
 
   .hisense-ai-launcher,
   .ai-copilot-launcher {
+    top: calc(50% + 15px);
     width: 30px;
     padding: 10px 0 10px 0;
     gap: 6px;
