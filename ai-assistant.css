@@ -48,7 +48,7 @@
 .ai-copilot-launcher {
   position: fixed;
   right: 0;
-  top: calc(50% + 8px);
+  top: calc(50% + 20px);
   transform: translateY(0);
   z-index: 9998;
   display: flex;
@@ -842,7 +842,7 @@
 
   .hisense-ai-launcher,
   .ai-copilot-launcher {
-    top: calc(50% + 15px);
+    top: calc(50% + 25px);
     width: 30px;
     padding: 10px 0 10px 0;
     gap: 6px;

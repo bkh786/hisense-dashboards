@@ -149,7 +149,7 @@ header.topbar{
   position: fixed;
   right: 0;
   left: auto;
-  top: calc(50% - 130px);
+  top: calc(50% - 165px);
   transform: translateY(0);
   z-index: 9990;
   display: flex;
@@ -1126,7 +1126,7 @@ footer .brand-line img{height:14px;opacity:.6;}
 @media (max-width:760px){
   body{padding-left:0;}
   .sidebar-nav{display:none;}
-  .filter-toggle-btn{top:calc(50% - 110px);}
+  .filter-toggle-btn{top:calc(50% - 135px);}
   .filterbar{position:relative;top:auto;}
   .browser-tabbar { padding: 6px 8px 0 8px; }
   .nav-browser-tab { padding: 6px 12px 7px 10px; font-size: 11px; }
