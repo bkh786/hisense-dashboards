@@ -105,7 +105,7 @@
   // =========================================================================
   // LIVE DATASET DATE RESOLUTION & CLIENT-SIDE IN-MEMORY PIPE TABLE COMPILER
   // =========================================================================
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   let lastSyncedDatasetDate = '';
 
   function formatPrettyDate(iso) {
@@ -554,12 +554,12 @@
     const computeRoiFn = (typeof window.computeRoiAggregate === 'function')
       ? window.computeRoiAggregate
       : ((fRows, sRows) => {
-          const m = new Map();
-          fRows.forEach(r => { if (r.userCode && r.ctc && !m.has(r.userCode)) m.set(r.userCode, r.ctc); });
-          const totalCtc = Array.from(m.values()).reduce((a, b) => a + b, 0) * 1.20 * 1.035;
-          const totalSales = sRows.reduce((a, r) => a + (Number(r.value) || 0), 0);
-          return { roi: totalCtc > 0 ? totalSales / totalCtc : 0, totalCtc, promoterCount: m.size };
-        });
+        const m = new Map();
+        fRows.forEach(r => { if (r.userCode && r.ctc && !m.has(r.userCode)) m.set(r.userCode, r.ctc); });
+        const totalCtc = Array.from(m.values()).reduce((a, b) => a + b, 0) * 1.20 * 1.035;
+        const totalSales = sRows.reduce((a, r) => a + (Number(r.value) || 0), 0);
+        return { roi: totalCtc > 0 ? totalSales / totalCtc : 0, totalCtc, promoterCount: m.size };
+      });
 
     const lines = [];
     lines.push('### HISENSE SALES PERFORMANCE MASTER METRICS (LIVE IN-MEMORY BROWSER DATASET):');
@@ -708,14 +708,27 @@
     lines.push('');
 
     // Promoters (Strictly Promoter Role matching index.html)
+    // Promoters (Strictly Promoter Role matching index.html)
+    // Build set of inactive users as per User Status column AM
+    const inactiveUsers = new Set();
+    allRecords.forEach(r => {
+      const uStatus = String(r.userStatus || '').trim().toLowerCase();
+      if (uStatus === 'inactive') {
+        if (r.userCode) inactiveUsers.add(r.userCode);
+        if (r.promoter) inactiveUsers.add(r.promoter);
+      }
+    });
+
     const promMap = new Map();
     activeRows.filter(isPromoterFn).forEach(r => {
       const code = r.userCode || r.promoter;
       if (!code) return;
+      if (inactiveUsers.has(code) || (r.promoter && inactiveUsers.has(r.promoter))) return;
       if (!promMap.has(code)) {
         promMap.set(code, {
           code, name: r.promoter || code, store: r.store || '—',
           tl: r.tl || '—', zone: r.zone || '—', state: r.state || '—',
+          userStatus: r.userStatus || '',
           val: 0, qty: 0
         });
       }
@@ -724,9 +737,11 @@
       const code = r.userCode || r.promoter;
       if (!code) return;
       if (!promMap.has(code)) {
+        if (inactiveUsers.has(code) || (r.promoter && inactiveUsers.has(r.promoter))) return;
         promMap.set(code, {
           code, name: r.promoter || code, store: r.store || '—',
           tl: r.tl || '—', zone: r.zone || '—', state: r.state || '—',
+          userStatus: r.userStatus || '',
           val: 0, qty: 0
         });
       }
@@ -737,7 +752,7 @@
 
     const allProms = Array.from(promMap.values());
     const activeProms = allProms.filter(p => p.val > 0).sort((a, b) => b.val - a.val);
-    const zeroProms = allProms.filter(p => p.val === 0).sort((a, b) => a.name.localeCompare(b.name));
+    const zeroProms = allProms.filter(p => p.val === 0 && !inactiveUsers.has(p.code) && !inactiveUsers.has(p.name)).sort((a, b) => a.name.localeCompare(b.name));
 
     lines.push('### TOP 25 PROMOTERS BY SALES VALUE (ACTIVE VIEW):');
     lines.push('Rank|Promoter|User Code|Store|TL|Zone|State|Units|Sales Value (₹)');
@@ -753,9 +768,11 @@
     });
     lines.push('');
 
-    // Top 20 Stores & Top 20 SKUs
+    // Top Stores, Detailed SKU Price Analysis, and Flagship Sales Log
     const byStore = new Map();
     const bySku = new Map();
+    const flagshipSales = [];
+
     activeSales.forEach(r => {
       const st = `${r.store || 'Unknown'} (${r.zone || ''})`;
       if (!byStore.has(st)) byStore.set(st, { val: 0, qty: 0 });
@@ -763,9 +780,67 @@
       byStore.get(st).qty += Number(r.qty) || 0;
 
       if (r.sku) {
-        if (!bySku.has(r.sku)) bySku.set(r.sku, { val: 0, qty: 0, cat: r.category || '' });
-        bySku.get(r.sku).val += Number(r.value) || 0;
-        bySku.get(r.sku).qty += Number(r.qty) || 0;
+        const skuKey = String(r.sku).trim();
+        const p = Number(r.price) || 0;
+        const v = Number(r.value) || (p * (Number(r.qty) || 1));
+        const q = Number(r.qty) || 1;
+        const prom = r.promoter || r.userCode || 'Unknown';
+        const stName = r.store || '';
+        const mo = r.salesMonth || '';
+        const sDate = r.saleDate || '';
+
+        if (!bySku.has(skuKey)) {
+          bySku.set(skuKey, {
+            sku: skuKey,
+            cat: r.category || '',
+            techCat: r.techCat || '',
+            subCat: r.subCat || '',
+            unitPrice: p,
+            val: 0,
+            qty: 0,
+            promoters: new Map()
+          });
+        }
+        const sObj = bySku.get(skuKey);
+        if (p > sObj.unitPrice) sObj.unitPrice = p;
+        sObj.val += v;
+        sObj.qty += q;
+
+        if (!sObj.promoters.has(prom)) {
+          sObj.promoters.set(prom, {
+            name: prom,
+            code: r.userCode || '',
+            store: stName,
+            tl: r.tl || '',
+            zone: r.zone || '',
+            state: r.state || '',
+            qty: 0,
+            val: 0,
+            months: new Set()
+          });
+        }
+        const pObj = sObj.promoters.get(prom);
+        pObj.qty += q;
+        pObj.val += v;
+        if (mo) pObj.months.add(mo);
+
+        if (p >= 150000 || skuKey.includes('100UX')) {
+          flagshipSales.push({
+            id: r.id || '',
+            sku: skuKey,
+            promoter: prom,
+            code: r.userCode || '',
+            store: stName,
+            tl: r.tl || '',
+            zone: r.zone || '',
+            state: r.state || '',
+            date: sDate,
+            month: mo,
+            price: p,
+            qty: q,
+            val: v
+          });
+        }
       }
     });
 
@@ -776,11 +851,42 @@
     });
     lines.push('');
 
-    lines.push('### TOP 20 SKUs BY SALES VALUE (ACTIVE VIEW):');
-    lines.push('Rank|SKU|Category|Sales Value (₹)|Units Sold');
-    Array.from(bySku.entries()).sort((a, b) => b[1].val - a[1].val).slice(0, 20).forEach(([k, g], idx) => {
-      lines.push(`#${idx + 1}|${k}|${g.cat}|₹${Math.round(g.val).toLocaleString('en-IN')}|${Math.round(g.qty).toLocaleString('en-IN')}`);
+    // 1. HIGHEST-PRICED / FLAGSHIP SKUs BY UNIT PRICE (MRP / Selling Price per Unit)
+    const allSkus = Array.from(bySku.values());
+    const sortedByUnitPrice = allSkus.slice().sort((a, b) => b.unitPrice - a.unitPrice);
+
+    lines.push('### HIGHEST-PRICED / FLAGSHIP SKUs BY UNIT PRICE (ACTIVE VIEW):');
+    lines.push('Rank|SKU Model|Category|Unit Price (₹)|Units Sold|Total Sales Value (₹)|Promoters Who Sold It');
+    sortedByUnitPrice.slice(0, 20).forEach((s, idx) => {
+      const promList = Array.from(s.promoters.values()).map(p => {
+        const mStr = p.months.size > 0 ? Array.from(p.months).join(', ') : '';
+        return `${p.name} (${p.qty} unit${p.qty > 1 ? 's' : ''}${mStr ? ' in ' + mStr : ''} @ ${p.store || p.zone})`;
+      }).join('; ');
+      const catStr = s.cat + (s.techCat ? ` (${s.techCat})` : '');
+      lines.push(`#${idx + 1}|${s.sku}|${catStr}|₹${Math.round(s.unitPrice).toLocaleString('en-IN')}|${Math.round(s.qty)}|₹${Math.round(s.val).toLocaleString('en-IN')}|${promList || 'None'}`);
     });
+    lines.push('');
+
+    // 2. TOP 25 BEST-SELLING SKUs BY TOTAL SALES REVENUE / VALUE
+    const sortedByTotalVal = allSkus.slice().sort((a, b) => b.val - a.val);
+    lines.push('### TOP 25 BEST-SELLING SKUs BY TOTAL SALES REVENUE / VALUE (ACTIVE VIEW):');
+    lines.push('Rank|SKU Model|Category|Unit Price (₹)|Units Sold|Total Sales Value (₹)|Top Promoters');
+    sortedByTotalVal.slice(0, 25).forEach((s, idx) => {
+      const topProms = Array.from(s.promoters.values()).sort((a, b) => b.qty - a.qty).slice(0, 3).map(p => `${p.name} (${p.qty})`).join(', ');
+      const catStr = s.cat + (s.techCat ? ` (${s.techCat})` : '');
+      lines.push(`#${idx + 1}|${s.sku}|${catStr}|₹${Math.round(s.unitPrice).toLocaleString('en-IN')}|${Math.round(s.qty)}|₹${Math.round(s.val).toLocaleString('en-IN')}|${topProms}`);
+    });
+    lines.push('');
+
+    // 3. ULTRA-PREMIUM / FLAGSHIP SALES LINE-ITEM LOG (Unit Price >= ₹1.5 Lakhs or 100UX)
+    if (flagshipSales.length > 0) {
+      lines.push('### ULTRA-PREMIUM / FLAGSHIP SALES LINE-ITEM LOG (UNIT PRICE ≥ ₹1.5 LAKHS):');
+      lines.push('SKU|Sale Date|Month|Promoter Name|User Code|Store|TL|Zone|State|Unit Price (₹)|Qty|Total Value (₹)');
+      flagshipSales.slice(0, 40).forEach(t => {
+        lines.push(`${t.sku}|${t.date}|${t.month}|${t.promoter}|${t.code}|${t.store}|${t.tl}|${t.zone}|${t.state}|₹${Math.round(t.price).toLocaleString('en-IN')}|${t.qty}|₹${Math.round(t.val).toLocaleString('en-IN')}`);
+      });
+      lines.push('');
+    }
 
     return lines.join('\n');
   }
@@ -961,13 +1067,12 @@
               class="hisense-ai-input"
               id="hisenseInput"
               rows="1"
-              placeholder="Ask anything about ${
-                isDisplayComp ? 'D-1 vs D-2 displays, growth, or outlets' :
-                isDisplay ? 'product displays, categories, or outlets' :
-                isAttendance ? 'attendance, present rates, or promoters' :
-                isHiring ? 'vacancies, hiring status, or roles' :
-                'sales, ROI, promoters, or zones'
-              }..."
+              placeholder="Ask anything about ${isDisplayComp ? 'D-1 vs D-2 displays, growth, or outlets' :
+        isDisplay ? 'product displays, categories, or outlets' :
+          isAttendance ? 'attendance, present rates, or promoters' :
+            isHiring ? 'vacancies, hiring status, or roles' :
+              'sales, ROI, promoters, or zones'
+      }..."
             ></textarea>
             <button class="hisense-ai-send-btn" id="hisenseSendBtn" type="button" title="Send (Enter)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -1059,7 +1164,7 @@
           syncFilters();
         });
         observer.observe(maxDateEl, { childList: true, characterData: true, subtree: true });
-      } catch (e) {}
+      } catch (e) { }
     }
     const kpiGridEl = document.getElementById('kpiGrid');
     if (kpiGridEl && window.MutationObserver) {
@@ -1068,7 +1173,7 @@
           syncFilters();
         });
         kpiObserver.observe(kpiGridEl, { childList: true });
-      } catch (e) {}
+      } catch (e) { }
     }
     window.addEventListener('hisense:data-updated', () => {
       syncFilters();
@@ -1175,10 +1280,10 @@
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 6000);
-      const res = await fetch(url, { 
-        method: 'GET', 
+      const res = await fetch(url, {
+        method: 'GET',
         cache: 'no-store',
-        signal: controller.signal 
+        signal: controller.signal
       });
       clearTimeout(timeoutId);
       if (!res.ok) return null;
@@ -1208,9 +1313,9 @@
       if (resolvedApiUrl !== '/api/chat') candidates.push('/api/chat');
 
       // Local dev fallback if running locally
-      const isLocal = window.location.hostname === 'localhost' || 
-                      window.location.hostname === '127.0.0.1' || 
-                      window.location.protocol === 'file:';
+      const isLocal = window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.protocol === 'file:';
       if (isLocal) {
         if (!candidates.includes('http://localhost:8000/api/chat')) {
           candidates.push('http://localhost:8000/api/chat');
@@ -1238,7 +1343,7 @@
         resolvedApiUrl = workingUrl;
         if (workingData.apiKeyConfigured) {
           isConnected = true;
-          try { sessionStorage.setItem('hisense_ai_connected', 'true'); } catch (e) {}
+          try { sessionStorage.setItem('hisense_ai_connected', 'true'); } catch (e) { }
           if (pill) pill.className = 'hisense-ai-status-pill';
           if (statusText) statusText.textContent = 'Connected & Live';
           if (launcherDot) launcherDot.className = 'hisense-ai-launcher-status-dot';
@@ -1251,7 +1356,7 @@
           }
         } else {
           isConnected = false;
-          try { sessionStorage.removeItem('hisense_ai_connected'); } catch (e) {}
+          try { sessionStorage.removeItem('hisense_ai_connected'); } catch (e) { }
           if (pill) pill.className = 'hisense-ai-status-pill is-warning';
           if (statusText) statusText.textContent = 'Key Missing';
           if (launcherDot) launcherDot.className = 'hisense-ai-launcher-status-dot offline';
@@ -1259,7 +1364,7 @@
         }
       } else {
         isConnected = false;
-        try { sessionStorage.removeItem('hisense_ai_connected'); } catch (e) {}
+        try { sessionStorage.removeItem('hisense_ai_connected'); } catch (e) { }
         if (pill) pill.className = 'hisense-ai-status-pill is-error';
         if (statusText) statusText.textContent = 'Not Connected';
         if (launcherDot) launcherDot.className = 'hisense-ai-launcher-status-dot offline';
@@ -1268,7 +1373,7 @@
     } catch (err) {
       console.error('[AI Copilot] checkHealth error:', err);
       isConnected = false;
-      try { sessionStorage.removeItem('hisense_ai_connected'); } catch (e) {}
+      try { sessionStorage.removeItem('hisense_ai_connected'); } catch (e) { }
       if (pill) pill.className = 'hisense-ai-status-pill is-error';
       if (statusText) statusText.textContent = 'Not Connected';
       if (launcherDot) launcherDot.className = 'hisense-ai-launcher-status-dot offline';
@@ -1471,7 +1576,7 @@
           window.LIVE_DATA_PROMISE,
           new Promise(resolve => setTimeout(resolve, 8000))
         ]);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // Prepare payload with live in-memory client pipe table
@@ -1523,7 +1628,7 @@
         conversationHistory.push({ role: 'model', text: reply });
         // Mark status as live
         isConnected = true;
-        try { sessionStorage.setItem('hisense_ai_connected', 'true'); } catch (e) {}
+        try { sessionStorage.setItem('hisense_ai_connected', 'true'); } catch (e) { }
         const pill = document.getElementById('hisenseStatusPill');
         const statusText = document.getElementById('hisenseStatusText');
         const launcherDot = document.getElementById('hisenseLauncherDot');

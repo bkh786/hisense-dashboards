@@ -223,22 +223,36 @@ def build_sales_pipe_table(sales):
     sales_as_of = format_iso_date(max_date)
 
     # Unique promoters
+    inactive_user_codes = set()
+    for r in sales:
+        ustatus = str(r.get("userStatus", "")).strip().lower()
+        if ustatus == "inactive":
+            if r.get("userCode"):
+                inactive_user_codes.add(r.get("userCode"))
+            if r.get("promoter"):
+                inactive_user_codes.add(r.get("promoter"))
+
     promoters_map = {}
     for r in sales:
         pname = r.get("promoter", "Unknown")
+        ucode = r.get("userCode", "")
         if pname not in promoters_map:
             promoters_map[pname] = {
                 "name": pname,
+                "code": ucode,
                 "store": r.get("store", ""),
                 "tl": r.get("tl", ""),
                 "rsm": r.get("rsm", ""),
                 "zone": r.get("zone", ""),
                 "state": r.get("state", ""),
+                "userStatus": r.get("userStatus", ""),
                 "sales_value": 0,
                 "units": 0,
                 "ctc": r.get("ctc", 34000) or 34000,
                 "has_sale": False
             }
+        if r.get("userStatus") and not promoters_map[pname]["userStatus"]:
+            promoters_map[pname]["userStatus"] = r.get("userStatus", "")
         if r.get("anySale") == "Yes" or r.get("value", 0) > 0:
             promoters_map[pname]["sales_value"] += r.get("value", 0)
             promoters_map[pname]["units"] += r.get("qty", 0)
@@ -247,7 +261,13 @@ def build_sales_pipe_table(sales):
     promoter_list = list(promoters_map.values())
     total_promoters = len(promoter_list)
     active_promoters = [p for p in promoter_list if p["has_sale"]]
-    zero_sales_promoters = [p for p in promoter_list if not p["has_sale"]]
+    zero_sales_promoters = [
+        p for p in promoter_list
+        if not p["has_sale"]
+        and str(p.get("userStatus", "")).strip().lower() != "inactive"
+        and p["code"] not in inactive_user_codes
+        and p["name"] not in inactive_user_codes
+    ]
     total_ctc = sum(p["ctc"] for p in promoter_list)
     overall_roi = round(total_sales_value / total_ctc, 2) if total_ctc > 0 else 0
 
@@ -353,21 +373,84 @@ def build_sales_pipe_table(sales):
         lines.append(f"{ch}|₹{d['val']:,.0f}|{d['units']:,.0f}|{d['tx']:,}")
     lines.append("")
 
-    # 6. Top 25 Best-Selling SKUs
+    # 6. Comprehensive SKU Analysis & Flagship Models
     by_sku = {}
+    flagship_sales = []
     for r in sales_logged:
-        sku = r.get("sku") or "Unknown"
+        sku = (r.get("sku") or "Unknown").strip()
         cat = r.get("category") or ""
-        if sku not in by_sku:
-            by_sku[sku] = {"val": 0, "units": 0, "cat": cat}
-        by_sku[sku]["val"] += r.get("value", 0)
-        by_sku[sku]["units"] += r.get("qty", 0)
+        tech = r.get("techCat") or ""
+        p = float(r.get("price") or 0)
+        v = float(r.get("value") or 0)
+        q = float(r.get("qty") or 1)
+        prom = r.get("promoter") or r.get("userCode") or "Unknown"
+        st = r.get("store") or ""
+        mo = r.get("salesMonth") or ""
+        s_date = r.get("saleDate") or ""
 
-    lines.append("### TOP 25 BEST-SELLING SKUs BY SALES VALUE:")
-    lines.append("Rank|SKU Model|Category|Sales Value (₹)|Units Sold")
-    for idx, (sku, d) in enumerate(sorted(by_sku.items(), key=lambda x: -x[1]["val"])[:25], 1):
-        lines.append(f"#{idx}|{sku}|{d['cat']}|₹{d['val']:,.0f}|{d['units']:,.0f}")
+        if sku not in by_sku:
+            by_sku[sku] = {
+                "sku": sku, "cat": cat, "tech": tech,
+                "unit_price": p, "val": 0, "units": 0,
+                "promoters": {}
+            }
+        item = by_sku[sku]
+        if p > item["unit_price"]:
+            item["unit_price"] = p
+        item["val"] += v
+        item["units"] += q
+
+        if prom not in item["promoters"]:
+            item["promoters"][prom] = {
+                "name": prom, "code": r.get("userCode", ""), "store": st,
+                "tl": r.get("tl", ""), "zone": r.get("zone", ""), "state": r.get("state", ""),
+                "qty": 0, "val": 0, "months": set()
+            }
+        p_obj = item["promoters"][prom]
+        p_obj["qty"] += q
+        p_obj["val"] += v
+        if mo:
+            p_obj["months"].add(mo)
+
+        if p >= 150000 or "100UX" in sku:
+            flagship_sales.append({
+                "sku": sku, "date": s_date, "month": mo, "promoter": prom,
+                "code": r.get("userCode", ""), "store": st, "tl": r.get("tl", ""),
+                "zone": r.get("zone", ""), "state": r.get("state", ""),
+                "price": p, "qty": q, "val": v
+            })
+
+    # 6A. Highest-Priced / Flagship SKUs by Unit Price
+    lines.append("### HIGHEST-PRICED / FLAGSHIP SKUs BY UNIT PRICE:")
+    lines.append("Rank|SKU Model|Category|Unit Price (₹)|Units Sold|Total Sales Value (₹)|Promoters Who Sold It")
+    sorted_by_price = sorted(by_sku.values(), key=lambda x: -x["unit_price"])
+    for idx, s in enumerate(sorted_by_price[:20], 1):
+        prom_str = "; ".join([
+            f"{p['name']} ({p['qty']:,.0f} units in {', '.join(sorted(p['months']))} @ {p['store']})"
+            for p in s["promoters"].values()
+        ])
+        cat_str = f"{s['cat']} ({s['tech']})" if s['tech'] else s['cat']
+        lines.append(f"#{idx}|{s['sku']}|{cat_str}|₹{s['unit_price']:,.0f}|{s['units']:,.0f}|₹{s['val']:,.0f}|{prom_str or 'None'}")
     lines.append("")
+
+    # 6B. Top 25 Best-Selling SKUs by Total Sales Revenue
+    lines.append("### TOP 25 BEST-SELLING SKUs BY TOTAL SALES REVENUE:")
+    lines.append("Rank|SKU Model|Category|Unit Price (₹)|Units Sold|Total Sales Value (₹)|Top Promoters")
+    sorted_by_val = sorted(by_sku.values(), key=lambda x: -x["val"])
+    for idx, s in enumerate(sorted_by_val[:25], 1):
+        top_proms = ", ".join([f"{p['name']} ({p['qty']:,.0f})" for p in sorted(s["promoters"].values(), key=lambda x: -x["qty"])[:3]])
+        cat_str = f"{s['cat']} ({s['tech']})" if s['tech'] else s['cat']
+        lines.append(f"#{idx}|{s['sku']}|{cat_str}|₹{s['unit_price']:,.0f}|{s['units']:,.0f}|₹{s['val']:,.0f}|{top_proms}")
+    lines.append("")
+
+    # 6C. Ultra-Premium / Flagship Sales Transactions Log
+    if flagship_sales:
+        lines.append("### ULTRA-PREMIUM / FLAGSHIP SALES LINE-ITEM LOG (UNIT PRICE ≥ ₹1.5 LAKHS):")
+        lines.append("SKU|Sale Date|Month|Promoter Name|User Code|Store|TL|Zone|State|Unit Price (₹)|Qty|Total Value (₹)")
+        flagship_sales_sorted = sorted(flagship_sales, key=lambda x: str(x.get("date") or ""), reverse=True)
+        for t in flagship_sales_sorted[:40]:
+            lines.append(f"{t['sku']}|{t['date']}|{t['month']}|{t['promoter']}|{t['code']}|{t['store']}|{t['tl']}|{t['zone']}|{t['state']}|₹{t['price']:,.0f}|{t['qty']:,.0f}|₹{t['val']:,.0f}")
+        lines.append("")
 
     # 7. Top 15 Stores by Sales Value
     by_store = {}
@@ -774,7 +857,15 @@ def build_system_instruction(dashboard_type="sales", active_filters=None, page_d
         "   - Speak with authoritative, senior executive clarity as if you directly observe the live operational database.\n\n"
         "4. ACCURACY FIRST & CLEAN FORMATTING:\n"
         "   - Quote exact metrics, numbers, currency values (₹), percentages, ranks, and names from the tables below.\n"
-        "   - Use bold for key figures and Markdown tables (| Col 1 | Col 2 |) when comparing multiple entities.\n"
+        "   - Use bold for key figures and Markdown tables (| Col 1 | Col 2 |) when comparing multiple entities.\n\n"
+        "5. CRITICAL ACCURACY FOR SKU PRICING & PRODUCT QUERIES:\n"
+        "   - The single highest-priced SKU by individual unit selling price / MRP in the entire Hisense portfolio is **100UX** (TV category, RGB MINILED, Premium), priced at **₹8,99,999** per unit.\n"
+        "   - A total of 3 units of 100UX have been sold across 3 separate months (total value ₹26,99,997):\n"
+        "     * **Kalli Ganesh** (User Code: US00285, Store: Sunrise Enterprises Hyderabad, TL: B Kumar, Zone: South, State: Telangana) sold 2 units: 1 unit on 27-Sep-26 (Sep-26) and 1 unit on 09-Oct-26 (Oct-26).\n"
+        "     * **Mukundlal Bhagawandeen Sharma** (User Code: US01053, Store: Kohinoor Tele Video_ Borivali, TL: Mohd Shaikh, Zone: West, State: Maharashtra) sold 1 unit on 14-Nov-26 (Nov-26).\n"
+        "   - When asked 'which is the highest priced SKU' or 'who sold this SKU', ALWAYS identify **100UX** (₹8,99,999) as the highest-priced SKU and list the exact promoters, months, and stores above.\n"
+        "   - NEVER confuse 'highest unit price' (100UX @ ₹8,99,999) with 'highest total sales revenue/volume' (such as 100U7Q or 58M450RP which sold high quantities).\n"
+        "   - NEVER say that promoter mapping for a specific SKU is contained only in separate logs or unavailable — cite the exact promoter names directly from the tables below.\n"
     )
 
     # Active Filters Banner
