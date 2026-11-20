@@ -630,6 +630,8 @@
         if (d.key === 'salesMonth') {
           const def = getDefaultMonth();
           state.filters[d.key] = def ? new Set([def]) : new Set();
+        } else if (d.key === 'qcStatus') {
+          state.filters[d.key] = new Set(['Approved']);
         } else {
           state.filters[d.key] = new Set();
         }
@@ -666,7 +668,15 @@
             }
             const def = getDefaultMonth();
             state.filters[d.key] = def ? new Set([def]) : new Set();
+          } else if (d.key === 'qcStatus') {
+            if (preserveMonth && state.filters[d.key] !== undefined) {
+              return;
+            }
+            state.filters[d.key] = new Set(['Approved']);
           } else {
+            if (preserveMonth && state.filters[d.key] !== undefined) {
+              return;
+            }
             state.filters[d.key] = new Set();
           }
         });
